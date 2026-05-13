@@ -62,7 +62,7 @@ def source_location() -> SourceLocation:
     return SourceLocation(
         kind=SourceLocationKind.PARAGRAPH_INDEX,
         value="1",
-        confidence="explicit",
+        confidence=1.0,
     )
 
 
@@ -137,6 +137,83 @@ def unit() -> RegulationUnitDraft:
     )
 
 
+def dependency_edge(**overrides: object) -> DependencyEdgeDraft:
+    data: dict[str, object] = {
+        "edge_id": "edge-1",
+        "document_id": "doc-1",
+        "from_unit_id": "unit-1",
+        "to_unit_id": None,
+        "target_document_id": None,
+        "target_document_title": None,
+        "target_source_type": None,
+        "target_label": "Article 2",
+        "target_scope": "unknown",
+        "resolution_status": "ambiguous",
+        "relation_kind": RelationKind.CROSS_REFERENCE,
+        "source_candidate_ids": [],
+        "evidence_text": "See Article 2",
+        "confidence": 0.6,
+        "ambiguity_notes": ["target article needs review"],
+    }
+    data.update(overrides)
+    return DependencyEdgeDraft(**data)
+
+
+def reference_candidate(**overrides: object) -> ReferenceCandidate:
+    data: dict[str, object] = {
+        "candidate_id": "candidate-1",
+        "document_id": "doc-1",
+        "from_unit_id": "unit-1",
+        "target_label": "Article 2",
+        "evidence_text": "See Article 2",
+        "source_location": source_location(),
+        "confidence": 0.6,
+        "ambiguity_notes": [],
+        "warnings": [],
+    }
+    data.update(overrides)
+    return ReferenceCandidate(**data)
+
+
+def validation_report(**overrides: object) -> StructuringValidationReport:
+    data: dict[str, object] = {
+        "document_id": "doc-1",
+        "summary": "Review required",
+        "findings": [],
+    }
+    data.update(overrides)
+    return StructuringValidationReport(**data)
+
+
+def dependency_graph(**overrides: object) -> ResolvedDependencyGraphDraft:
+    data: dict[str, object] = {
+        "graph_id": "graph-1",
+        "document_id": "doc-1",
+        "reference_candidate_ids": ["candidate-1"],
+        "dependency_edges": [],
+        "warnings": [],
+    }
+    data.update(overrides)
+    return ResolvedDependencyGraphDraft(**data)
+
+
+def pipeline_output(**overrides: object) -> StructuringPipelineOutput:
+    data: dict[str, object] = {
+        "extraction_provenance": ExtractionProvenance(
+            extraction_method=ExtractionMethod.MIXED,
+            prompt_contract_version="structuring-v1",
+            model_trace_id="trace-1",
+        ),
+        "document": document(),
+        "units": [unit()],
+        "reference_candidates": [reference_candidate()],
+        "dependency_graph": dependency_graph(),
+        "validation_report": validation_report(),
+    }
+    data.update(overrides)
+    return StructuringPipelineOutput(**data)
+
+
 def test_enums_include_reserved_review_status_values() -> None:
     assert ReviewStatus.NEEDS_REVIEW.value == "needs_review"
     assert ReviewStatus.APPROVED.value == "approved"
@@ -200,73 +277,177 @@ def test_reference_candidate_dependency_edge_and_alias() -> None:
         ambiguity_notes=["target article needs review"],
         warnings=[],
     )
-    edge = DependencyEdgeDraft(
-        edge_id="edge-1",
-        document_id="doc-1",
-        from_unit_id="unit-1",
-        to_unit_id=None,
-        target_document_id=None,
-        target_document_title=None,
-        target_source_type=None,
-        target_label="Article 2",
-        target_scope="unknown",
-        resolution_status="ambiguous",
-        relation_kind=RelationKind.CROSS_REFERENCE,
+    edge = dependency_edge(
         source_candidate_ids=[candidate.candidate_id],
-        evidence_text="See Article 2",
-        confidence=0.6,
-        ambiguity_notes=["target article needs review"],
     )
 
     assert RegulationUnitRelationDraft is DependencyEdgeDraft
     assert edge.review_status is ReviewStatus.NEEDS_REVIEW
 
 
-def test_validation_report_and_output_bundle_models() -> None:
-    candidate = ReferenceCandidate(
-        candidate_id="candidate-1",
-        document_id="doc-1",
-        from_unit_id="unit-1",
-        target_label="Article 2",
-        evidence_text="See Article 2",
-        source_location=source_location(),
-        confidence=0.6,
+def test_dependency_edge_requires_to_unit_for_resolved_same_document() -> None:
+    with pytest.raises(ValidationError):
+        dependency_edge(
+            target_scope="same_document",
+            resolution_status="resolved",
+            to_unit_id=None,
+        )
+
+
+def test_dependency_edge_accepts_to_unit_for_resolved_same_document() -> None:
+    edge = dependency_edge(
+        target_scope="same_document",
+        resolution_status="resolved",
+        to_unit_id="unit-2",
+        target_label=None,
         ambiguity_notes=[],
-        warnings=[],
     )
-    graph = ResolvedDependencyGraphDraft(
-        graph_id="graph-1",
-        document_id="doc-1",
-        reference_candidate_ids=[candidate.candidate_id],
-        dependency_edges=[],
-        warnings=[],
+
+    assert edge.to_unit_id == "unit-2"
+
+
+def test_dependency_edge_requires_target_for_resolved_external_document() -> None:
+    with pytest.raises(ValidationError):
+        dependency_edge(
+            target_scope="external_document",
+            resolution_status="resolved",
+            target_document_id=None,
+            target_document_title=None,
+            target_label=None,
+            ambiguity_notes=[],
+        )
+
+
+def test_dependency_edge_requires_label_or_notes_for_unresolved() -> None:
+    with pytest.raises(ValidationError):
+        dependency_edge(
+            resolution_status="unresolved",
+            target_label=None,
+            ambiguity_notes=[],
+        )
+
+
+def test_dependency_edge_accepts_ambiguity_notes_for_ambiguous() -> None:
+    edge = dependency_edge(
+        resolution_status="ambiguous",
+        target_label=None,
+        ambiguity_notes=["candidate target cannot be resolved from provided text"],
     )
-    report = StructuringValidationReport(
-        document_id="doc-1",
-        summary="Review required",
+
+    assert edge.resolution_status == "ambiguous"
+
+
+def test_validation_report_and_output_bundle_models() -> None:
+    output = pipeline_output(
+        validation_report=validation_report(
+            findings=[
+                StructuringValidationFinding(
+                    code="ambiguous_reference",
+                    severity=ValidationSeverity.WARNING,
+                    message="Reference target needs review",
+                    document_id="doc-1",
+                    unit_id="unit-1",
+                    source_location=source_location(),
+                )
+            ],
+        )
+    )
+
+    assert output.contract_version == "v1"
+    assert output.validation_report.has_errors is False
+
+
+def test_validation_finding_target_metadata_defaults_and_values() -> None:
+    default_finding = StructuringValidationFinding(
+        code="output_warning",
+        severity=ValidationSeverity.WARNING,
+        message="Output needs review",
+    )
+    dependency_finding = StructuringValidationFinding(
+        stage="dependency",
+        target_type="dependency_edge",
+        target_id="edge-1",
+        code="ambiguous_dependency",
+        severity=ValidationSeverity.WARNING,
+        message="Dependency target needs review",
+    )
+
+    assert default_finding.stage == "output"
+    assert default_finding.target_type == "unknown"
+    assert default_finding.target_id is None
+    assert dependency_finding.stage == "dependency"
+    assert dependency_finding.target_type == "dependency_edge"
+    assert dependency_finding.target_id == "edge-1"
+
+
+def test_validation_report_counts_findings_by_severity() -> None:
+    report = validation_report(
+        findings=[
+            StructuringValidationFinding(
+                code="schema_error",
+                severity=ValidationSeverity.ERROR,
+                message="Schema validation failed",
+            ),
+            StructuringValidationFinding(
+                code="ambiguous_reference",
+                severity=ValidationSeverity.WARNING,
+                message="Reference target needs review",
+            ),
+            StructuringValidationFinding(
+                code="normalized",
+                severity=ValidationSeverity.INFO,
+                message="Input normalized",
+            ),
+        ],
+    )
+
+    assert report.error_count == 1
+    assert report.warning_count == 1
+    assert report.info_count == 1
+    assert report.has_errors is True
+
+
+def test_validation_report_has_errors_false_without_error_findings() -> None:
+    report = validation_report(
         findings=[
             StructuringValidationFinding(
                 code="ambiguous_reference",
                 severity=ValidationSeverity.WARNING,
                 message="Reference target needs review",
-                document_id="doc-1",
-                unit_id="unit-1",
-                source_location=source_location(),
             )
         ],
     )
-    output = StructuringPipelineOutput(
-        extraction_provenance=ExtractionProvenance(
-            extraction_method=ExtractionMethod.MIXED,
-            prompt_contract_version="structuring-v1",
-            model_trace_id="trace-1",
-        ),
-        document=document(),
-        units=[unit()],
-        reference_candidates=[candidate],
-        dependency_graph=graph,
-        validation_report=report,
-    )
 
-    assert output.contract_version == "v1"
-    assert output.validation_report.has_errors is False
+    assert report.error_count == 0
+    assert report.warning_count == 1
+    assert report.info_count == 0
+    assert report.has_errors is False
+
+
+def test_pipeline_output_requires_matching_validation_report_document_id() -> None:
+    with pytest.raises(ValidationError):
+        pipeline_output(validation_report=validation_report(document_id="doc-other"))
+
+
+def test_pipeline_output_requires_matching_dependency_graph_document_id() -> None:
+    with pytest.raises(ValidationError):
+        pipeline_output(dependency_graph=dependency_graph(document_id="doc-other"))
+
+
+def test_pipeline_output_requires_matching_unit_document_ids() -> None:
+    with pytest.raises(ValidationError):
+        pipeline_output(units=[unit().model_copy(update={"document_id": "doc-other"})])
+
+
+def test_pipeline_output_requires_matching_reference_candidate_document_ids() -> None:
+    with pytest.raises(ValidationError):
+        pipeline_output(
+            reference_candidates=[
+                reference_candidate(document_id="doc-other"),
+            ]
+        )
+
+
+def test_pipeline_output_rejects_blank_contract_version() -> None:
+    with pytest.raises(ValidationError):
+        pipeline_output(contract_version=" ")

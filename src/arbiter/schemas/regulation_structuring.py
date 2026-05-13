@@ -20,6 +20,8 @@ class DocumentStatus(str, Enum):
 
 
 class ParseStatus(str, Enum):
+    PARSED = "parsed"  # Structuring completed; draft still needs review.
+    PARTIAL = "partial"  # Structuring partially completed.
     NEEDS_REVIEW = "needs_review"
     FAILED = "failed"
 
@@ -42,6 +44,7 @@ class IssuerType(str, Enum):
     SELF_REGULATORY_ORGANIZATION = "self_regulatory_organization"
     INTERNAL_ORG = "internal_org"
     EXTERNAL_OTHER = "external_other"
+    JOINT_ISSUERS = "joint_issuers"
     UNKNOWN = "unknown"
 
 
@@ -115,11 +118,18 @@ class NormalizedTextInput(StrictModel):
 
 
 class DocumentCategory(StrictModel):
+    category_scheme: Literal[
+        "external_regulation_type",
+        "internal_policy_type",
+        "business_domain",
+        "compliance_topic",
+        "custom",
+    ] = "custom"
     category_code: str | None = None
     category_label: str | None = None
     tags: list[str] = Field(default_factory=list)
     evidence_text: str | None = None
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     ambiguity_notes: list[str] = Field(default_factory=list)
 
 
@@ -131,7 +141,7 @@ class DocumentClassificationDraft(StrictModel):
     topic_tags: list[str] = Field(default_factory=list)
     classification_tags: list[str] = Field(default_factory=list)
     evidence_text: list[str] = Field(default_factory=list)
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     review_status: ReviewStatus = ReviewStatus.NEEDS_REVIEW
     ambiguity_notes: list[str] = Field(default_factory=list)
 
@@ -139,14 +149,17 @@ class DocumentClassificationDraft(StrictModel):
 class SourceLocation(StrictModel):
     kind: SourceLocationKind = SourceLocationKind.UNKNOWN
     value: str | None = None
-    confidence: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class TemporalMetadata(StrictModel):
     version_label: str | None = None
+    effective_date_text: str | None = None
+    promulgation_date_text: str | None = None
+    repeal_date_text: str | None = None
     amendment_history_text: str | None = None
     validity_notes: list[str] = Field(default_factory=list)
-    temporal_confidence: float | None = None
+    temporal_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     ambiguity_notes: list[str] = Field(default_factory=list)
 
 
@@ -162,6 +175,7 @@ class RegulationDocumentDraft(StrictModel):
     source_file: str
     classification: DocumentClassificationDraft
     title: str | None = None
+    document_number: str | None = None
     document_status: DocumentStatus = DocumentStatus.UNKNOWN
     effective_date: date | None = None
     promulgation_date: date | None = None
@@ -169,37 +183,104 @@ class RegulationDocumentDraft(StrictModel):
     temporal_metadata: TemporalMetadata
     parse_status: ParseStatus = ParseStatus.NEEDS_REVIEW
     warnings: list[str] = Field(default_factory=list)
+    review_status: ReviewStatus = ReviewStatus.NEEDS_REVIEW
 
 
 class HierarchyPath(StrictModel):
+    part: str | None = None
     chapter: str | None = None
     section: str | None = None
     article_number: str | None = None
     article_title: str | None = None
+    paragraph_number: str | None = None
     paragraph_index: int | None = None
+    item_number: str | None = None
     item_label: str | None = None
+    subitem_number: str | None = None
+    heading_path: list[str] = Field(default_factory=list)
+
+
+class SemanticUnitType(str, Enum):
+    """Primary semantic category assigned to a regulation unit draft."""
+
+    # Defines terms, concepts, or scoped meanings.
+    DEFINITION = "definition"
+    # Requires an actor to perform an action.
+    OBLIGATION = "obligation"
+    # Forbids an action or state.
+    PROHIBITION = "prohibition"
+    # Describes process, sequence, or procedural steps.
+    PROCEDURE = "procedure"
+    # Carves out an exception from another requirement.
+    EXCEPTION = "exception"
+    # States a condition, prerequisite, or dependency.
+    CONDITION = "condition"
+    # Requires reporting, filing, notice, or disclosure.
+    REPORTING = "reporting"
+    # Sets a numeric, date, amount, or threshold constraint.
+    THRESHOLD = "threshold"
+    # Grants permission, authority, or approval scope.
+    AUTHORIZATION = "authorization"
+    # Describes liability, consequence, or responsibility.
+    LIABILITY = "liability"
+    # Provides general context without a narrower semantic role.
+    GENERAL = "general"
+    # Semantic role was not determined.
+    UNKNOWN = "unknown"
 
 
 class SemanticUnitDraft(StrictModel):
-    unit_type: str | None = None
+    """Reviewable semantic extraction draft for one RegulationUnitDraft.
+
+    This is not a RuleItem, an executable compliance rule, or a
+    JudgmentResult. Extracted content should remain traceable to the unit's
+    original_text or normalized_text. Medium/high-risk outputs should remain
+    needs_review until approved by a human reviewer.
+    """
+
+    # Single primary semantic label for filtering, routing, and review UI.
+    # If multiple legal effects exist, choose the dominant role and place
+    # remaining facets in the detailed list fields.
+    unit_type: SemanticUnitType = SemanticUnitType.UNKNOWN
+    # Optional normalized title for the semantic draft.
     normalized_title: str | None = None
+    # Brief human-reviewable summary of the unit.
+    summary: str | None = None
+    # Draft extracted definitions found in the unit.
     definitions: list[str] = Field(default_factory=list)
+    # Draft obligations or duties found in the unit.
     obligations: list[str] = Field(default_factory=list)
+    # Draft exceptions or carve-outs found in the unit.
     exceptions: list[str] = Field(default_factory=list)
+    # Draft applicability statements for persons, entities, or contexts.
     applicability: list[str] = Field(default_factory=list)
+    # Draft actors referenced by the unit.
     actors: list[str] = Field(default_factory=list)
+    # Draft conditions or prerequisites referenced by the unit.
     conditions: list[str] = Field(default_factory=list)
+    # Draft events that may trigger the unit.
     trigger_events: list[str] = Field(default_factory=list)
+    # Draft actions required by the unit.
     required_actions: list[str] = Field(default_factory=list)
+    # Draft actions prohibited by the unit.
     prohibited_actions: list[str] = Field(default_factory=list)
+    # Draft timing, date, or deadline statements.
     deadlines: list[str] = Field(default_factory=list)
+    # Draft numeric, amount, date, or limit thresholds.
     thresholds: list[str] = Field(default_factory=list)
+    # Draft subject scope for covered actors or subjects.
     subject_scope: list[str] = Field(default_factory=list)
+    # Draft object scope for covered objects or matters.
     object_scope: list[str] = Field(default_factory=list)
+    # Draft reporting, filing, notice, or disclosure duties.
     reporting_obligations: list[str] = Field(default_factory=list)
+    # Source excerpts supporting the draft semantic extraction.
     evidence_text: list[str] = Field(default_factory=list)
-    confidence: float | None = None
+    # Draft confidence score for the semantic extraction.
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Review gate for draft semantic content.
     review_status: ReviewStatus = ReviewStatus.NEEDS_REVIEW
+    # Notes on uncertainty, ambiguity, or competing interpretations.
     ambiguity_notes: list[str] = Field(default_factory=list)
 
 
@@ -208,6 +289,18 @@ class RegulationUnitDraft(StrictModel):
     document_id: str
     parent_unit_id: str | None = None
     order_index: int
+    unit_level: int | None = None
+    unit_kind: Literal[
+        "part",
+        "chapter",
+        "section",
+        "article",
+        "paragraph",
+        "item",
+        "subitem",
+        "appendix",
+        "unknown",
+    ] = "unknown"
     display_label: str | None = None
     source_id: str
     source_file: str
@@ -239,7 +332,7 @@ class ReferenceCandidate(StrictModel):
     target_label: str
     evidence_text: str
     source_location: SourceLocation | None = None
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     ambiguity_notes: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
@@ -258,9 +351,52 @@ class DependencyEdgeDraft(StrictModel):
     relation_kind: RelationKind
     source_candidate_ids: list[str] = Field(default_factory=list)
     evidence_text: str
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     ambiguity_notes: list[str] = Field(default_factory=list)
     review_status: ReviewStatus = ReviewStatus.NEEDS_REVIEW
+
+    @model_validator(mode="after")
+    def validate_resolution_target(self) -> "DependencyEdgeDraft":
+        has_target_label = bool(self.target_label and self.target_label.strip())
+        has_target_document = any(
+            value and value.strip()
+            for value in (
+                self.target_document_id,
+                self.target_document_title,
+                self.target_label,
+            )
+        )
+
+        if (
+            self.resolution_status == "resolved"
+            and self.target_scope == "same_document"
+            and not self.to_unit_id
+        ):
+            raise ValueError(
+                "to_unit_id is required for resolved same-document dependencies"
+            )
+
+        if (
+            self.resolution_status == "resolved"
+            and self.target_scope == "external_document"
+            and not has_target_document
+        ):
+            raise ValueError(
+                "resolved external-document dependencies require a target identifier, "
+                "title, or label"
+            )
+
+        if (
+            self.resolution_status in {"unresolved", "ambiguous"}
+            and not has_target_label
+            and not self.ambiguity_notes
+        ):
+            raise ValueError(
+                "unresolved or ambiguous dependencies require target_label or "
+                "ambiguity_notes"
+            )
+
+        return self
 
 
 RegulationUnitRelationDraft = DependencyEdgeDraft
@@ -275,6 +411,25 @@ class ResolvedDependencyGraphDraft(StrictModel):
 
 
 class StructuringValidationFinding(StrictModel):
+    stage: Literal[
+        "input",
+        "document",
+        "unit",
+        "semantic",
+        "reference",
+        "dependency",
+        "output",
+    ] = "output"
+    target_type: Literal[
+        "document",
+        "unit",
+        "semantic_draft",
+        "reference_candidate",
+        "dependency_edge",
+        "pipeline_output",
+        "unknown",
+    ] = "unknown"
+    target_id: str | None = None
     code: str
     severity: ValidationSeverity
     message: str
@@ -287,13 +442,23 @@ class StructuringValidationReport(StrictModel):
     document_id: str
     summary: str
     findings: list[StructuringValidationFinding] = Field(default_factory=list)
+    error_count: int = 0
+    warning_count: int = 0
+    info_count: int = 0
     has_errors: bool = False
 
     @model_validator(mode="after")
-    def sync_has_errors(self) -> "StructuringValidationReport":
-        self.has_errors = any(
+    def sync_counts_and_has_errors(self) -> "StructuringValidationReport":
+        self.error_count = sum(
             finding.severity is ValidationSeverity.ERROR for finding in self.findings
         )
+        self.warning_count = sum(
+            finding.severity is ValidationSeverity.WARNING for finding in self.findings
+        )
+        self.info_count = sum(
+            finding.severity is ValidationSeverity.INFO for finding in self.findings
+        )
+        self.has_errors = self.error_count > 0
         return self
 
 
@@ -305,6 +470,37 @@ class StructuringPipelineOutput(StrictModel):
     reference_candidates: list[ReferenceCandidate] = Field(default_factory=list)
     dependency_graph: ResolvedDependencyGraphDraft
     validation_report: StructuringValidationReport
+
+    @field_validator("contract_version")
+    @classmethod
+    def contract_version_must_not_be_blank(cls, value: str) -> str:
+        return _not_blank(value, "contract_version")
+
+    @model_validator(mode="after")
+    def validate_document_linkage(self) -> "StructuringPipelineOutput":
+        document_id = self.document.document_id
+
+        if self.validation_report.document_id != document_id:
+            raise ValueError(
+                "validation_report.document_id must match document.document_id"
+            )
+
+        if self.dependency_graph.document_id != document_id:
+            raise ValueError(
+                "dependency_graph.document_id must match document.document_id"
+            )
+
+        for unit in self.units:
+            if unit.document_id != document_id:
+                raise ValueError("unit.document_id must match document.document_id")
+
+        for candidate in self.reference_candidates:
+            if candidate.document_id != document_id:
+                raise ValueError(
+                    "reference_candidate.document_id must match document.document_id"
+                )
+
+        return self
 
 
 SECRET_PATTERN = re.compile(
@@ -336,6 +532,7 @@ __all__ = [
     "ReviewStatus",
     "SECRET_PATTERN",
     "SemanticUnitDraft",
+    "SemanticUnitType",
     "SourceLocation",
     "SourceLocationKind",
     "StructuringPipelineOutput",
