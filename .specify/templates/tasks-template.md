@@ -8,7 +8,12 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: The examples below include test tasks. Feature-specific tests are
+optional only when the specification does not request them and the work does not
+touch constitution-protected areas. Tests are REQUIRED for core schemas,
+Admin/Runtime boundaries, model-output validation, configuration/security
+behavior, temporal regulation basis, stable citation provenance, runtime
+review-status gates, sanitized logging, and error paths.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -62,12 +67,15 @@ description: "Task list template for feature implementation"
 
 Examples of foundational tasks (adjust based on your project):
 
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
+- [ ] T004 Define/update shared JSON / Pydantic schemas for the feature
+- [ ] T005 [P] Configure secure environment/config handling for required settings
+- [ ] T006 [P] Configure sanitized logging and trace fields
+- [ ] T007 Implement or wire LLMClient / ModelProvider access if model calls are needed
+- [ ] T008 Create base models/entities that all stories depend on
+- [ ] T009 Add temporal regulation basis fields and validation where regulation assets or judgments are touched
+- [ ] T010 Add stable citation/retrieval provenance fields where judgment drafts are touched
+- [ ] T011 Add runtime review-status gate checks for draft / needs_review / missing-review-status assets
+- [ ] T012 Add required validation/error-path tests for constitution-protected behavior
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -79,7 +87,7 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 (include if requested or constitution-required) ⚠️
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
@@ -105,7 +113,7 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2 (include if requested or constitution-required) ⚠️
 
 - [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
@@ -127,7 +135,7 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 3 (include if requested or constitution-required) ⚠️
 
 - [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
@@ -155,6 +163,9 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
+- [ ] TXXX Audit log and trace redaction review
+- [ ] TXXX Confirm Runtime rejects draft / needs_review / missing-review-status assets unless execution mode is explicitly test
+- [ ] TXXX Confirm judgment drafts use stable regulation unit IDs, source document/version, article or clause number where available, and retrieval provenance
 - [ ] TXXX Run quickstart.md validation
 
 ---
@@ -178,7 +189,7 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Within Each User Story
 
-- Tests (if included) MUST be written and FAIL before implementation
+- Tests (if included or constitution-required) MUST be written and FAIL before implementation
 - Models before services
 - Services before endpoints
 - Core implementation before integration

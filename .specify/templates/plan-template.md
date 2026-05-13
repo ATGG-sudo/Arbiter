@@ -31,7 +31,39 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Answer each Arbiter constitution gate before design work proceeds:
+
+- **Admin / Runtime Separation**: Classify the feature as Admin, Runtime,
+  shared asset management, or cross-cutting infrastructure. If it crosses the
+  boundary, name the reviewed asset handoff schema and review-status gate.
+  Confirm Admin-side LLM-assisted regulation structuring remains draft-only
+  until validation and human review.
+- **Unified Model Access**: Confirm all model calls route through LLMClient /
+  ModelProvider, with provider configuration outside business logic and mock
+  provider coverage for tests.
+- **Structured Data Contracts**: List every core JSON / Pydantic schema touched
+  or introduced, including validation expectations for model outputs.
+- **Temporal Regulation Basis**: Confirm regulation assets and runtime judgment
+  drafts preserve source version, effective date, expiration date,
+  amendment/source-version relation, and as-of-date basis where available.
+- **Citation and Evidence**: Confirm judgment drafts cite stable regulation unit
+  IDs, source document/version, article or clause number where available, and
+  retrieval provenance; free-text citation labels are insufficient.
+- **Runtime Review Gates**: Confirm Runtime rejects draft / needs_review /
+  missing-review-status regulation assets unless execution mode is explicitly
+  marked as test.
+- **Secure Configuration**: Identify environment/config variables and confirm no
+  real secrets, private scenarios, or internal rules are hard-coded.
+- **Auditable but Sanitized Logging**: Define the IDs, validation results,
+  errors, review status, temporal basis, retrieval provenance, and redaction
+  strategy that traces/logs will capture.
+- **Code Quality and Testability**: List required tests for schema validation,
+  parsing or retrieval boundaries, temporal basis, citation provenance, runtime
+  review-status gates, model-output validation, error paths, and
+  security-sensitive behavior.
+
+Any failed gate MUST be recorded in Complexity Tracking with a mitigation and
+owner before implementation tasks are generated.
 
 ## Project Structure
 

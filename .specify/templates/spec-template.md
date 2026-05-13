@@ -90,6 +90,32 @@
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
+### Constitution Alignment *(mandatory for Arbiter features)*
+
+- **CA-001**: Feature scope MUST identify whether it belongs to Admin parsing,
+  Agent Runtime, shared asset management, or cross-cutting infrastructure.
+- **CA-002**: Runtime behavior MUST consume reviewed assets, reviewed rule packs,
+  retrieval context, or explicitly marked test fixtures; it MUST NOT parse raw
+  regulation or institution files directly. Runtime MUST reject draft,
+  needs_review, or missing-review-status regulation assets unless execution mode
+  is explicitly marked as test.
+- **CA-003**: Admin-side model-assisted regulation structuring is allowed, but
+  MUST use the shared LLMClient / ModelProvider abstraction, define how
+  structured outputs are validated, and keep LLM-derived regulation assets
+  draft / needs_review until human review.
+- **CA-004**: Regulation assets and runtime judgment drafts MUST preserve source
+  version, effective date, expiration date, amendment/source-version relation,
+  and as-of-date basis where available.
+- **CA-005**: Judgment drafts MUST cite stable regulation unit IDs, source
+  document/version, article or clause number where available, and retrieval
+  provenance. Free-text citation labels are insufficient.
+- **CA-006**: Core inputs and outputs MUST be represented as JSON / Pydantic
+  schemas, not hidden natural-language prompt contracts.
+- **CA-007**: Sensitive data, secrets, logs, traces, and human review status MUST
+  have explicit handling requirements.
+- **CA-008**: User-facing compliance outputs MUST remain judgment drafts for
+  human review and MUST NOT claim to replace final compliance decisions.
+
 *Example of marking unclear requirements:*
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
