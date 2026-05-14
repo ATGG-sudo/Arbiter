@@ -97,14 +97,20 @@
 - [ ] T045 [US4] Implement `review_status = needs_review` creation enforcement while reserving other enum values for later workflows in `src/arbiter/schemas/regulation_structuring.py`
 - [ ] T046 [US4] Verify US4 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_structuring_runtime_boundary.py tests/structuring/test_review_status_boundaries.py -q`
 
-## Phase 7: Polish and Cross-Cutting Verification
+## Phase 7: Workbench Invocation Boundary and Cross-Cutting Verification
 
-**Purpose**: Confirm documentation and full feature slice remain aligned.
+**Purpose**: Confirm documentation and full feature slice remain aligned, and
+cover the 001-owned thin Admin adapter used by spec003 workbench runs.
 
 - [X] T047 [P] Update quickstart command and artifact path notes for the implemented Admin-only structuring slice in `specs/001-regulation-structuring/quickstart.md`
 - [X] T048 Run the full structuring test slice with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring -q`
 - [X] T049 Check contract examples and JSON blocks remain aligned with implemented schema names in `specs/001-regulation-structuring/contracts/structuring-pipeline-contract.md`
 - [ ] T050 Verify no forbidden runtime artifacts, ComplianceJudgmentAgent exposure, real model calls in tests, database or local asset-registry lookup, reviewed dependency edges, final compliance conclusions, secrets, full prompts, provider payloads, absolute local paths, or unnecessary raw sensitive text are introduced by scanning `src/arbiter/` and `tests/structuring/`
+- [ ] T050a [P] Write failing workbench invocation contract tests for `run_structuring_from_markdown(request) -> StructuringRunResult` request IDs, Markdown-derived normalized input, success, validation failure, structured errors, and cancelled/error statuses in `tests/structuring/test_workbench_invocation_boundary.py`
+- [ ] T050b [P] Write failing mock-provider and sanitization tests proving workbench invocation routes all model calls through `LLMClient / ModelProvider`, returns only sanitized trace summaries/token counts, and never exposes full prompts, provider payloads, API keys, active rules, `JudgmentResult`, or final conclusions in `tests/structuring/test_workbench_invocation_boundary.py`
+- [ ] T050c Implement the 001-owned local Admin workbench invocation adapter in `src/arbiter/structuring/workbench_adapter.py`; it converts `StructuringRunRequest` Markdown into `NormalizedTextInput`, delegates to `structure_regulation`, validates `StructuringPipelineOutput`, and returns `StructuringRunResult`
+- [ ] T050d Export the workbench invocation adapter from `src/arbiter/structuring/__init__.py` without registering it as a Runtime or Agent tool
+- [ ] T050e Verify the workbench invocation boundary with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_workbench_invocation_boundary.py -q`
 
 ## Dependencies
 
@@ -112,7 +118,8 @@
 - Phase 2 foundational schemas, mock provider fixtures, and export helpers must complete before full pipeline implementation.
 - User stories can then proceed in priority order: US1 -> US2 -> US3 -> US4.
 - US4 can add negative boundary tests as soon as package paths exist, but final verification depends on US1 output shape.
-- Phase 7 runs after all selected user stories are complete.
+- Phase 7 runs after all selected user stories are complete and before spec003
+  relies on live Markdown-to-001 workbench invocation.
 
 ## Parallel Examples
 

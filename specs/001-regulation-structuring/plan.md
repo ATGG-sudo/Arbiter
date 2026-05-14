@@ -64,6 +64,14 @@ promotion are out of scope
   `RegulationUnitRelationDraft`, `ResolvedDependencyGraphDraft`,
   `StructuringValidationReport`, and `StructuringPipelineOutput`. LLM outputs
   must validate against these schemas before entering downstream output.
+- **Temporal Regulation Basis**: PASS. The pipeline preserves recognized
+  version, effective-date, repeal/expiration, amendment, validity, and ambiguity
+  metadata where available, and missing temporal facts remain explicit review
+  findings or unknowns rather than inferred values.
+- **Citation and Evidence**: PASS. Source identity, source locations, original
+  unit text, evidence text, reference candidates, dependency edge evidence,
+  validation findings, and extraction provenance remain inspectable for review
+  and downstream handoff.
 - **Secure Configuration**: PASS. Model settings and secrets are read through
   the existing model/config boundary and are not serialized into artifacts.
   Source labels must not require absolute local paths.
@@ -156,7 +164,12 @@ Completed artifacts:
 - `specs/001-regulation-structuring/quickstart.md`
 
 The contract defines `structure_regulation(input) -> StructuringPipelineOutput`
-as an offline/admin operation. The output is reviewable draft JSON containing a
+as the canonical offline/admin operation. It also defines a thin workbench
+invocation boundary, `run_structuring_from_markdown(request) ->
+StructuringRunResult`, which delegates to `structure_regulation`, routes model
+calls through `LLMClient / ModelProvider`, returns structured errors and
+sanitized trace summaries, and never produces runtime-safe assets or final
+compliance conclusions. The output is reviewable draft JSON containing a
 document draft, unit drafts, reference candidates, a dependency graph draft, and
 a validation report.
 
