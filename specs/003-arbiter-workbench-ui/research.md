@@ -1,100 +1,84 @@
 # Research: Arbiter Workbench UI
 
-## Decision: Frontend-only workbench for MVP
+## Decision: Primary flow invokes the 001 pipeline from the UI
 
-**Rationale**: The feature must curate 001 outputs immediately and prepare
-runtime-facing screens without implementing backend services, 002 runtime, rule
-execution, retrieval, or LLM calls. A frontend-only workbench can load fixture
-JSON, validate contracts, show review screens, and export artifacts while
-keeping execution boundaries clear.
-
-The implementation plan uses a TypeScript + Vite + React frontend with Zod as a
-frontend validation mirror for loaded JSON. This is the smallest concrete
-browser-app baseline that supports tree navigation, document metadata review,
-editable review surfaces, JSON import/export, mock adapter flows, and focused
-frontend tests without creating backend scope. The canonical 001 contract
-remains the existing Python/Pydantic schema.
+**Rationale**: The target workflow starts with Markdown inside the workbench and
+requires the user to click LLM-assisted parsing. A UI-local deterministic
+adapter cannot satisfy this because it does not use spec001's hybrid
+deterministic + LLM-assisted extraction. The workbench therefore needs an
+Admin-only structuring adapter that delegates to 001 and returns a validated
+`StructuringPipelineOutput`.
 
 **Alternatives considered**:
-- Backend-backed review service: rejected because storage, services, and
-  authentication are out of scope.
-- Runtime-integrated UI: rejected because 002 does not exist and this feature
-  must not implement runtime logic.
+- Keep JSON import as the main flow: rejected because users would need to run
+  001 elsewhere before review.
+- Keep UI-local Markdown conversion as the main flow: rejected because it is not
+  LLM-assisted and cannot represent 001 output quality or validation behavior.
+- Let frontend call a model provider directly: rejected by constitution and
+  security boundaries.
 
-## Decision: Use fixture/exported `StructuringPipelineOutput` as input
+## Decision: Model access remains inside 001 through ModelProvider
 
-**Rationale**: The MVP must work without running 001. Accepting fixture or
-exported JSON conforming to `StructuringPipelineOutput` lets reviewers validate
-the workbench with stable samples while the 001 implementation continues
-independently.
-
-**Alternatives considered**:
-- Invoke the 001 pipeline from the workbench: rejected because this feature must
-  not implement or depend on pipeline execution.
-- Accept raw PDF/DOCX: rejected because raw document parsing is explicitly out
-  of scope.
-
-## Decision: Export review and curation artifacts separately
-
-**Rationale**: Source JSON must remain unchanged. Separate
-`StructuringReviewPatch`, `StructuringReviewDecision`, and
-`AssetCurationRecord` artifacts preserve auditability, reviewer intent, source
-linkage, and optional reviewer identity when available without promoting drafts
-into formal runtime assets.
+**Rationale**: The constitution requires all model calls to go through
+`LLMClient / ModelProvider`. The existing 001 pipeline already accepts
+`model_provider` and validates structured outputs through Pydantic schemas.
+003 should call an Admin adapter, not own model prompts or provider
+configuration.
 
 **Alternatives considered**:
-- Mutate loaded source JSON in place: rejected because it hides audit history.
-- Generate active rules from review notes: rejected because active `RulePack`
-  and formal `RuleItem` creation are out of scope.
+- Add model provider configuration to frontend: rejected because it exposes
+  secrets and duplicates model-access policy.
+- Reimplement prompts in spec003: rejected because 001 owns structuring
+  semantics and schema validation.
 
-## Decision: Make repeated unsaved edit export behavior explicit
+## Decision: Add a workbench-to-001 adapter contract
 
-**Rationale**: Multiple unsaved edits to the same target and `field_path` can
-otherwise hide audit context. The workbench must make clear whether export
-produces a patch sequence or the latest consolidated patch so reviewers know
-what audit record they are creating.
-
-**Alternatives considered**:
-- Silently overwrite local edits: rejected because it loses review context.
-- Force only one export style in the feature spec: rejected because the product
-  requirement only needs the behavior to be clear and auditable.
-
-## Decision: Runtime-facing screens use mock/future adapters only
-
-**Rationale**: 002 Agent Runtime does not exist. Placeholder screens can still
-shape the future user experience by rendering scenario input, judgment drafts,
-citations, evidence, and sanitized traces from mocked data or a future adapter
-boundary.
+**Rationale**: Browser UI cannot directly call Python `structure_regulation`.
+The adapter contract makes the handoff explicit: `StructuringRunRequest` in,
+`StructuringRunResult` out. This contract can later be implemented as a local
+Admin API, CLI bridge, or desktop bridge without changing the review UI data
+model.
 
 **Alternatives considered**:
-- Implement runtime execution behind the UI: rejected as a direct scope
-  violation.
-- Omit runtime-facing screens entirely: rejected because the workbench must
-  prepare for future 002 integration.
+- Hard-code a backend framework in the feature spec: rejected because the
+  contract matters more than the transport in planning.
+- Make 003 own pipeline execution: rejected because 001 is the canonical
+  pipeline owner.
 
-## Decision: Placeholder runtime contracts remain replaceable
+## Decision: JSON import remains an advanced replay path
 
-**Rationale**: `RuntimeScenarioInput`, `RuntimeJudgmentDraftView`,
-`RuntimeCitationView`, `RuntimeEvidenceView`, and `RuntimeTraceView` are
-frontend-facing placeholders. They must not become backend or domain-level 002
-schemas, and they must remain replaceable once 002 finalizes its contracts.
-
-**Alternatives considered**:
-- Treat placeholder runtime contracts as final schemas: rejected because 002 has
-  not finalized its runtime contracts.
-- Leave runtime screens untyped: rejected because the UI needs stable mocked
-  data for planning and testing.
-
-## Decision: Validation is contract-first and explicit
-
-**Rationale**: The workbench must reject invalid 001 JSON, flag incomplete
-citations, preserve missing temporal/source data as incomplete, and prevent
-placeholder runtime contracts from being mistaken for final 002 schemas. Any
-frontend validation of `StructuringPipelineOutput` is only a UI-side mirror of
-the canonical 001 Python/Pydantic contract.
+**Rationale**: JSON import is still useful for fixtures, regression tests,
+audit replay, and outputs generated by CLI/batch 001 runs. It should not be the
+main expert flow, but removing it would make testing and replay less useful.
 
 **Alternatives considered**:
-- Best-effort rendering of malformed data: rejected because reviewers could
-  confuse fabricated or incomplete fields with reviewed evidence.
-- Create an editable review session after validation failure: rejected because
-  schema-incompatible inputs must not become reviewable content.
+- Remove JSON import: rejected because it weakens reproducibility and test
+  coverage.
+- Keep JSON import as equal primary UI: rejected because it confuses the target
+  Markdown-to-LLM flow.
+
+## Decision: Reviewed package is not runtime-safe
+
+**Rationale**: Experts need a reviewed result after editing draft fields. That
+review result should be named `reviewed_for_structuring` to distinguish it from
+runtime-safe reviewed regulation assets, active rules, or final judgments.
+
+**Alternatives considered**:
+- Mark output as `approved`: rejected because `approved` could be confused with
+  promotion to runtime assets.
+- Export only patches: rejected because users asked for an integrated reviewed
+  package.
+
+## Decision: Review surfaces must include LLM-specific outputs
+
+**Rationale**: 001 LLM assistance can affect document classification, semantic
+draft fields, reference candidates, dependency edges, validation findings, and
+extraction provenance. A workbench that only shows unit text and semantic fields
+is not sufficient for expert review.
+
+**Alternatives considered**:
+- Keep reference/dependency review as future work: rejected because the exported
+  package would claim reviewed status without reviewing important LLM-proposed
+  content.
+- Hide provenance behind export only: rejected because reviewers need to know
+  whether output was deterministic or mixed before approving it.

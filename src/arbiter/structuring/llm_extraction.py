@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from arbiter.llm import ModelProvider
 from arbiter.schemas.regulation_structuring import (
     DependencyEdgeDraft,
     DocumentClassificationDraft,
@@ -23,7 +24,7 @@ class LLMExtractionWrapper:
     findings rather than silently accepting invalid data.
     """
 
-    def __init__(self, provider: Any) -> None:
+    def __init__(self, provider: ModelProvider) -> None:
         self.provider = provider
         self.findings: list[StructuringValidationFinding] = []
         self.validated_call_count: int = 0

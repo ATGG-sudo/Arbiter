@@ -20,6 +20,63 @@ semantic unit extraction, article/paragraph boundary proposals, document
 classification, definitions, obligations, exceptions, actors, conditions,
 applicability, reference candidates, and draft dependency edges.
 
+## Workbench Invocation Boundary
+
+Admin workbench features may invoke this pipeline through a thin local adapter.
+The adapter is responsible for transport concerns, request IDs, sanitized trace
+summaries, and user-facing errors, but it must delegate structuring behavior to
+this operation and must not reimplement prompt logic or schema validation.
+
+Workbench-facing operation:
+
+`run_structuring_from_markdown(request) -> StructuringRunResult`
+
+Minimum request shape:
+
+```json
+{
+  "request_id": "string",
+  "input": {
+    "source_id": "string",
+    "source_file": "string",
+    "raw_markdown": "string",
+    "source_type": "external_regulation | internal_policy | unknown",
+    "metadata": {}
+  },
+  "llm_assisted": true,
+  "model_mode": "configured_provider | mock_provider",
+  "requested_at": "ISO-8601 datetime"
+}
+```
+
+Minimum response shape:
+
+```json
+{
+  "request_id": "string",
+  "run_id": "string",
+  "status": "succeeded | failed | validation_failed | cancelled",
+  "output": "StructuringPipelineOutput or null",
+  "errors": [],
+  "warnings": [],
+  "sanitized_trace": {},
+  "token_usage": null,
+  "completed_at": "ISO-8601 datetime or null"
+}
+```
+
+Required behavior:
+- The adapter converts Markdown to `NormalizedTextInput` and calls
+  `structure_regulation`.
+- If `llm_assisted=true`, model calls still go through `LLMClient /
+  ModelProvider`; frontend callers never receive provider secrets.
+- The adapter may use a mock provider for tests.
+- `output`, when present, must validate against `StructuringPipelineOutput`.
+- Full prompts, provider payloads, API keys, and unnecessary raw sensitive text
+  must not be included in `sanitized_trace`.
+- The response must not produce active `RulePack`, formal `RuleItem`, runtime
+  reviewed assets, `JudgmentResult`, or final compliance conclusions.
+
 ## Optional Intake Adapter Boundary
 
 PDF and Word are not direct first-slice request content types. Future upload or

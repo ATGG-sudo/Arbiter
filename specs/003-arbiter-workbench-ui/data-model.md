@@ -2,12 +2,27 @@
 
 ## Enums
 
+### WorkbenchInputKind
+
+- `markdown`
+- `structuring_output_json`
+
+### StructuringRunStatus
+
+- `idle`
+- `running`
+- `succeeded`
+- `failed`
+- `validation_failed`
+- `cancelled`
+
 ### ReviewDecision
 
 - `approved`
 - `rejected`
 - `needs_changes`
 - `needs_more_evidence`
+- `not_applicable`
 - `superseded`
 
 ### ReviewTargetType
@@ -19,246 +34,206 @@
 - `dependency_edge`
 - `curation_note`
 
-### CurationNoteType
+### IntegratedPackageStatus
 
-- `expert_note`
-- `candidate_rule_hint`
-- `scenario_example`
-- `ambiguity_case`
-- `dependency_issue`
-
-### RuntimeDraftStatus
-
-- `draft`
 - `needs_review`
-- `reviewed`
+- `reviewed_for_structuring`
 
-Runtime-facing outputs in this feature default to `draft` or `needs_review`.
-They are display contracts only and are not final compliance decisions.
+`reviewed_for_structuring` is an Admin review status only. It does not make the
+package runtime-safe and does not promote rules.
 
 ## Entities
 
-### StructuringPipelineOutput
+### MarkdownRegulationInput
 
-Existing 001 output consumed by the workbench.
-
-Key expectations:
-- Contains document metadata, units, semantic draft fields, evidence,
-  validation findings, provenance, and review status.
-- May be loaded from fixtures or exported JSON.
-- Must be validated before the workbench opens it as editable review content.
-- Frontend validation is a UI mirror only; the canonical 001 contract remains
-  the existing Python/Pydantic schema.
-- Must not be mutated in place by 003.
-
-### DocumentMetadataReviewView
-
-Reviewable display surface for document-level draft metadata from the loaded
-001 output.
+Markdown regulation or internal-policy source entered in the UI.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `title` | string or null | no | Draft title from the loaded output |
-| `document_number` | string or null | no | Draft document number when present |
-| `classification` | object or null | no | Draft document classification |
-| `dates` | object | yes | Effective, promulgation, repeal, or related dates when present |
-| `temporal_metadata` | object | yes | Version, amendment, and validity context |
-| `warnings` | list[string] | yes | Document-level warnings |
-| `validation_findings` | list[object] | yes | Source validation findings |
-| `review_status` | string | yes | Review state from source or review artifact |
+| `input_kind` | WorkbenchInputKind | yes | `markdown` |
+| `source_id` | string | yes | Workbench-generated or user-provided source ID |
+| `source_file` | string | yes | Upload file name or UI label |
+| `raw_markdown` | string | yes | Source Markdown snapshot |
+| `source_type` | string | no | external regulation, internal policy, or unknown |
+| `metadata` | object | yes | Optional title, document number, date, issuer, topic hints |
 
 Validation rules:
-- Missing metadata is shown as incomplete rather than inferred.
-- Reviewing metadata must not mutate the loaded source JSON.
+- `raw_markdown` must not be empty after trimming.
+- PDF and Word are not accepted here.
+- This input is converted to 001 `NormalizedTextInput` by the Admin adapter.
+
+### StructuringRunRequest
+
+UI-to-Admin-adapter request for LLM-assisted 001 structuring.
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `request_id` | string | yes | Workbench-generated request ID |
+| `input` | MarkdownRegulationInput | yes | Source Markdown and metadata |
+| `llm_assisted` | boolean | yes | Whether the adapter should use configured ModelProvider |
+| `model_mode` | string | yes | `configured_provider` or `mock_provider` for tests |
+| `requested_at` | string | yes | Timestamp |
+
+Validation rules:
+- Frontend must not include provider secrets.
+- `llm_assisted=true` means the Admin adapter may use the configured
+  `ModelProvider`; it does not authorize frontend model calls.
+
+### StructuringRunResult
+
+Adapter response after invoking 001 structuring.
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `request_id` | string | yes | Links to request |
+| `run_id` | string | yes | Adapter-generated run ID |
+| `status` | StructuringRunStatus | yes | Result state |
+| `output` | StructuringPipelineOutput or null | no | Present only when valid output exists |
+| `errors` | list[object] | yes | Structured errors |
+| `warnings` | list[string] | yes | Non-blocking warnings |
+| `sanitized_trace` | object or null | no | No full prompts or provider payloads |
+| `token_usage` | object or null | no | Counts only when available |
+| `completed_at` | string or null | no | Completion timestamp |
+
+Validation rules:
+- Invalid 001 output must not become an editable review session.
+- LLM schema-validation failures may appear inside `output.validation_report`
+  when the output remains reviewable.
+- Full prompts, provider payloads, API keys, and raw secret material are not
+  included.
+
+### StructuringPipelineOutput
+
+Canonical 001 draft output consumed by the workbench.
+
+Key expectations:
+- Contains extraction provenance, document draft, units, semantic draft fields,
+  reference candidates, dependency graph, validation report, evidence, warnings,
+  and review statuses.
+- Frontend validation is a UI mirror only; Python/Pydantic 001 schema remains
+  canonical.
+- Must be immutable as `base_output` once a review session starts.
+
+### ReviewSessionState
+
+Client-side workbench state for one draft.
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `session_id` | string | yes | Workbench session ID |
+| `input_kind` | WorkbenchInputKind | yes | Markdown run or JSON replay |
+| `source_markdown` | string or null | no | Present for Markdown flow |
+| `source_output_ref` | SourceOutputRef | yes | Stable source reference |
+| `base_output` | StructuringPipelineOutput | yes | Immutable 001 draft |
+| `patches` | list[StructuringReviewPatch] | yes | Expert edits |
+| `decisions` | list[StructuringReviewDecision] | yes | Expert decisions |
+| `curation_records` | list[AssetCurationRecord] | yes | Expert notes |
+| `review_gate_report` | ReviewGateReport | yes | Package readiness |
+| `merged_output` | StructuringPipelineOutput | yes | Base plus patches |
+
+Validation rules:
+- `base_output` is never mutated.
+- `merged_output` is review material only.
+- Session state is not a persistence database.
 
 ### SourceOutputRef
 
-Stable reference used by all review and curation artifacts.
+Stable reference used by review artifacts.
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `contract_version` | string | yes | 001 output contract version or compatible fixture version |
-| `document_id` | string | yes | Stable document identifier from the loaded output |
-| `source_id` | string | yes | Stable source identifier from the loaded output |
-| `source_file` | string | yes | Source label, not an absolute-path requirement |
-| `loaded_at` | string | yes | Timestamp for when the workbench loaded the source output |
+| Field | Type | Required |
+|-------|------|----------|
+| `contract_version` | string | yes |
+| `document_id` | string | yes |
+| `source_id` | string | yes |
+| `source_file` | string | yes |
+| `loaded_at` | string | yes |
+| `structuring_run_id` | string or null | no |
 
-Validation rules:
-- Hashes are not required.
-- Missing identifiers make exported review/curation artifacts invalid.
+Hashes are not required for MVP.
 
 ### StructuringReviewPatch
 
-Field-level reviewed edit artifact.
+Field-level expert edit against `base_output`.
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `source_output_ref` | SourceOutputRef | yes | Links back to the loaded 001 output |
-| `target_type` | ReviewTargetType | yes | Generic reviewed target type |
-| `target_id` | string | yes | ID for the reviewed document, unit, draft, candidate, edge, or note |
-| `unit_id` | string or null | no | Present for unit-level edits when applicable |
-| `field_path` | string | yes | Review-visible path to the edited field |
-| `old_value` | JSON value | yes | Value observed in the loaded source output |
-| `new_value` | JSON value | yes | Reviewer-proposed replacement |
-| `reviewer_note` | string | no | Human explanation or evidence note |
-| `reviewer_decision` | ReviewDecision | yes | Review decision for this field edit |
-| `reviewed_at` | string | yes | Review timestamp |
-| `reviewer_identity` | string or null | no | Reviewer identity when available |
+Required fields:
+- `source_output_ref`
+- `target_type`
+- `target_id`
+- `unit_id`
+- `field_path`
+- `old_value`
+- `new_value`
+- `reviewer_note`
+- `reviewer_decision`
+- `reviewed_at`
+- `reviewer_identity`
 
 Validation rules:
-- `old_value` must reflect the loaded source value at the time of edit.
-- Patch export must not duplicate full original regulation text unless the
-  edited field itself is that text.
-- Multiple unsaved edits to the same target and `field_path` must make clear
-  whether export produces a patch sequence or the latest consolidated patch.
-- Patches do not promote assets into runtime-safe reviewed assets.
-- Identity management is outside this feature.
+- `old_value` must reflect `base_output`.
+- Patches do not promote assets.
+- Multiple edits to the same field must either be exported as a sequence or
+  clearly consolidated.
 
 ### StructuringReviewDecision
 
-Target-level review decision artifact.
+Target-level expert decision.
+
+Required fields:
+- `source_output_ref`
+- `target_type`
+- `target_id`
+- `unit_id`
+- `reviewer_decision`
+- `reviewer_note`
+- `reviewed_at`
+- `reviewer_identity`
+
+Validation rules:
+- Decisions can approve, reject, request changes, request more evidence, mark
+  not applicable, or supersede a target.
+- Required target decisions feed `ReviewGateReport`.
+
+### ReviewGateReport
+
+Computed readiness report for export status.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `source_output_ref` | SourceOutputRef | yes | Links back to the loaded 001 output |
-| `target_type` | ReviewTargetType | yes | Document, unit, semantic draft, reference candidate, dependency edge, or curation note |
-| `target_id` | string | yes | Stable target identifier |
-| `unit_id` | string or null | no | Present when the decision is associated with a regulation unit |
-| `reviewer_decision` | ReviewDecision | yes | Decision outcome |
-| `reviewer_note` | string | no | Human-readable rationale |
-| `reviewed_at` | string | yes | Decision timestamp |
-| `reviewer_identity` | string or null | no | Reviewer identity when available |
+| `status` | IntegratedPackageStatus | yes | `needs_review` or `reviewed_for_structuring` |
+| `required_target_counts` | object | yes | Counts by target type |
+| `completed_target_counts` | object | yes | Counts by target type |
+| `blocking_validation_findings` | list[object] | yes | Error or unresolved findings |
+| `remaining_review_reasons` | list[string] | yes | Human-readable blockers |
 
 Validation rules:
-- Decisions remain review artifacts only.
-- A decision may reference an `AssetCurationRecord`, but it must not generate a
-  formal `RuleItem`, active `RulePack`, or final judgment.
-- Identity management is outside this feature.
+- `reviewed_for_structuring` requires no blocking validation findings and all
+  required targets decided.
+- A reviewer can mark a target `not_applicable`, but the decision must be
+  explicit and auditable.
 
-### AssetCurationRecord
+### IntegratedStructuringReviewPackage
 
-Optional expert curation note used to accumulate data-asset review knowledge.
+Export artifact for one reviewed workbench session.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `source_output_ref` | SourceOutputRef | yes | Links back to the loaded 001 output |
-| `curation_id` | string | yes | Stable workbench-generated note ID |
-| `note_type` | CurationNoteType | yes | Expert note, candidate rule hint, scenario example, ambiguity case, or dependency issue |
-| `target_type` | ReviewTargetType | no | Optional related review target |
-| `target_id` | string | no | Optional related target ID |
-| `unit_id` | string or null | no | Optional related unit ID |
-| `note` | string | yes | Expert-authored note |
-| `created_at` | string | yes | Creation timestamp |
-| `review_status` | string | yes | Defaults to `needs_review` |
-| `reviewer_identity` | string or null | no | Reviewer identity when available |
+| `package_version` | string | yes | Workbench package contract version |
+| `package_id` | string | yes | Workbench-generated package ID |
+| `input_kind` | WorkbenchInputKind | yes | Markdown or JSON replay |
+| `source_markdown` | string or null | no | Present for Markdown flow |
+| `source_output_ref` | SourceOutputRef | yes | Base output reference |
+| `base_output` | StructuringPipelineOutput | yes | Immutable 001 draft |
+| `review_patches` | list[StructuringReviewPatch] | yes | Expert edits |
+| `review_decisions` | list[StructuringReviewDecision] | yes | Expert decisions |
+| `curation_records` | list[AssetCurationRecord] | yes | Expert notes |
+| `merged_output` | StructuringPipelineOutput | yes | Patched reviewed output |
+| `review_gate_report` | ReviewGateReport | yes | Readiness evidence |
+| `package_status` | IntegratedPackageStatus | yes | Mirrors gate report |
+| `exported_at` | string | yes | Timestamp |
 
 Validation rules:
-- Curation records are not active rules, formal rule items, reviewed runtime
-  assets, final judgments, or final compliance conclusions.
-- Candidate rule hints are clues for later expert work only.
-- Identity management is outside this feature.
-
-### RuntimeScenarioInput
-
-Placeholder frontend-facing scenario input contract.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `scenario_id` | string | yes | Workbench-generated ID |
-| `question` | string | yes | Natural-language compliance question |
-| `structured_fields` | object | no | Optional business scenario fields |
-| `as_of_date` | string or null | no | Date basis when provided |
-
-Validation rules:
-- This is not a final 002 runtime input schema.
-- Submission is allowed only through mocked or future 002 adapters.
-
-### RuntimeJudgmentDraftView
-
-Placeholder frontend-facing judgment draft display contract.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `draft_id` | string | yes | Stable draft display ID |
-| `scenario_id` | string | yes | Links to `RuntimeScenarioInput` |
-| `status` | RuntimeDraftStatus | yes | Usually `draft` or `needs_review` |
-| `summary` | string | yes | Draft answer summary |
-| `confidence` | number or null | no | Adapter-provided confidence |
-| `warnings` | list[string] | yes | Display warnings |
-| `validation_status` | string | yes | Adapter-provided validation status |
-| `human_review_required` | boolean | yes | Review gate indicator |
-| `citations` | list[RuntimeCitationView] | yes | Supporting citations |
-| `evidence` | list[RuntimeEvidenceView] | yes | Supporting evidence |
-| `trace` | RuntimeTraceView | no | Sanitized trace summary |
-
-Validation rules:
-- Must be labeled as non-final.
-- Must not be treated as `JudgmentResult`.
-- Must remain replaceable once 002 finalizes its runtime schemas.
-- Must not be treated as a backend or domain-level 002 schema.
-
-### RuntimeCitationView
-
-Placeholder frontend-facing citation display contract.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `citation_id` | string | yes | Stable citation ID |
-| `unit_id` | string | yes | Stable regulation unit ID |
-| `document_id` | string | yes | Source document ID |
-| `source_version` | string or null | no | Version label when available |
-| `article_or_clause` | string or null | no | Article or clause number when available |
-| `provenance` | string or null | no | Adapter-provided provenance |
-| `as_of_date` | string or null | no | Interpretation date basis |
-
-Validation rules:
-- Missing `unit_id` or `document_id` makes the citation incomplete.
-- Free-text citation labels alone are insufficient.
-- Must remain replaceable once 002 finalizes its runtime schemas.
-
-### RuntimeEvidenceView
-
-Placeholder frontend-facing evidence display contract.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `evidence_id` | string | yes | Stable evidence ID |
-| `unit_id` | string | no | Related regulation unit when available |
-| `excerpt` | string | no | Bounded evidence excerpt |
-| `dependency_context` | list[string] | yes | Related dependency context supplied by adapter |
-| `provenance` | string or null | no | Adapter-provided provenance |
-| `as_of_date` | string or null | no | Date basis when supplied |
-
-Validation rules:
-- Evidence display must not fabricate missing source fields.
-- Large or sensitive raw content must be bounded or redacted.
-- Must remain replaceable once 002 finalizes its runtime schemas.
-
-### RuntimeTraceView
-
-Placeholder frontend-facing sanitized trace display contract.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `trace_id` | string | yes | Stable trace ID |
-| `steps` | list[object] | yes | Sanitized trace summaries |
-| `redaction_warnings` | list[string] | yes | Redaction/blocking notes |
-
-Validation rules:
-- Must not expose secrets, full prompts, provider payloads, or unnecessary
-  sensitive raw text.
-- Trace display is inspection-only and does not execute runtime logic.
-- Must remain replaceable once 002 finalizes its runtime schemas.
-
-## State Rules
-
-- Loaded 001 source JSON remains immutable in the workbench.
-- Invalid or schema-incompatible `StructuringPipelineOutput` creates no
-  editable review session.
-- Unsaved edits are local draft UI state until exported.
-- Exported patches, decisions, and curation records are separate artifacts.
-- Runtime-facing outputs are placeholder drafts unless a future adapter marks a
-  display-only status otherwise.
-- No artifact in this feature becomes active `RulePack`, formal `RuleItem`,
-  runtime-safe reviewed asset, final `JudgmentResult`, or final compliance
-  conclusion.
+- `base_output` must remain unchanged.
+- `merged_output` remains Admin review material.
+- `reviewed_for_structuring` does not mean runtime-safe.
+- Package must not include provider secrets, full prompts, or raw provider
+  payloads.

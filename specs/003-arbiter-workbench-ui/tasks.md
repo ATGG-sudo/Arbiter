@@ -20,6 +20,9 @@
 - Do not implement 001 pipeline execution, 002 Agent Runtime, retrieval, vector search, rule execution, LLM calls, backend APIs, database persistence, active `RulePack`, formal `RuleItem`, final `JudgmentResult`, or PDF/DOCX parsing.
 - Runtime-facing flows remain mocked/future-adapter UI flows only.
 - Frontend Zod validation is a UI mirror for loaded JSON only; the canonical 001 contract remains the existing Python/Pydantic schema.
+- Markdown intake is allowed only through a UI-local, deterministic,
+  draft-only adapter that produces 001-shaped review data; it is not canonical
+  001 pipeline execution.
 
 ## Phase 1: Setup
 
@@ -47,6 +50,7 @@
 - [ ] T011 [P] Write targeted boundary tests for forbidden dependencies, network/runtime calls in the mock adapter, backend/API/database files, and forbidden modifications to 001-owned paths in `frontend/tests/contract/scopeBoundary.contract.test.ts`
 - [ ] T012 Implement the `StructuringPipelineOutput` Zod frontend validation mirror in `frontend/src/contracts/structuringOutput.ts`
 - [ ] T013 Implement review and curation artifact contracts in `frontend/src/contracts/reviewArtifacts.ts`
+- [ ] T013a Implement `IntegratedStructuringReviewPackage` and input-kind contracts in `frontend/src/contracts/reviewArtifacts.ts`
 - [ ] T014 Implement placeholder runtime UI contracts in `frontend/src/contracts/runtimeContracts.ts`
 - [ ] T015 [P] Add a valid 10-unit `StructuringPipelineOutput` fixture in `frontend/src/fixtures/structuring-output.valid.json`
 - [ ] T016 [P] Add invalid and schema-incompatible input fixtures in `frontend/src/fixtures/structuring-output.invalid.json`
@@ -55,6 +59,8 @@
 - [ ] T019 Implement JSON import validation helpers that create no editable session for invalid input in `frontend/src/validation/loadStructuringOutput.ts`
 - [ ] T020 Implement sanitized trace redaction helpers in `frontend/src/validation/redaction.ts`
 - [ ] T021 Implement review artifact export helpers without mutating loaded source JSON in `frontend/src/workbench/exportArtifacts.ts`
+- [ ] T021a Implement Markdown-to-review draft adapter in `frontend/src/adapters/markdownStructuringAdapter.ts`
+- [ ] T021b Implement integrated package export helpers that preserve base output and apply edits only to `merged_output` in `frontend/src/workbench/exportArtifacts.ts`
 - [ ] T022 Implement a mocked runtime adapter with no external calls in `frontend/src/adapters/mockRuntimeAdapter.ts`
 
 **Checkpoint**: Frontend contracts, fixtures, mock adapter, and boundary guards are ready.
@@ -63,9 +69,9 @@
 
 ## Phase 3: User Story 1 - Curate Reviewed Regulation Data Assets (Priority: P1) MVP
 
-**Goal**: Experts can load 001-compatible fixture JSON, inspect document and unit data, edit semantic draft fields, record notes/decisions, and export separate review or curation artifacts without mutating source JSON.
+**Goal**: Experts can paste or upload Markdown, or load 001-compatible fixture JSON, inspect document and unit data, edit semantic draft fields, record notes/decisions, and export an integrated modified structuring review package without mutating base output.
 
-**Independent Test**: Load `frontend/src/fixtures/structuring-output.valid.json`, inspect the unit tree and document metadata, select units, edit a semantic field, add a curation note, export artifacts, and verify the loaded source JSON remains unchanged.
+**Independent Test**: Enter Markdown with a title, chapter, and article; inspect the generated unit tree and document metadata; select units; edit a semantic field; add a curation note; export an integrated package; and verify `base_output` remains unchanged while `merged_output` contains the reviewed edit. Repeat with `frontend/src/fixtures/structuring-output.valid.json` to verify JSON still opens through the same review surfaces.
 
 ### Tests for User Story 1
 
@@ -73,18 +79,19 @@
 - [ ] T024 [P] [US1] Write unit tree ordering and parent-child rendering tests in `frontend/tests/contract/unitTree.contract.test.ts`
 - [ ] T025 [P] [US1] Write document metadata review tests in `frontend/tests/contract/documentMetadata.contract.test.ts`
 - [ ] T026 [P] [US1] Write review patch, decision, curation note, and repeated-edit export tests in `frontend/tests/contract/reviewExport.contract.test.ts`
+- [ ] T026a [P] [US1] Write Markdown adapter and integrated package export tests in `frontend/tests/contract/integratedPackage.contract.test.ts`
 - [ ] T027 [P] [US1] Write Playwright smoke test for the curation review flow in `frontend/tests/smoke/curation-flow.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T028 [US1] Implement source JSON loading and validation UI in `frontend/src/workbench/StructuringOutputLoader.tsx`
+- [ ] T028 [US1] Implement Markdown and source JSON loading and validation UI in `frontend/src/workbench/StructuringOutputLoader.tsx`
 - [ ] T029 [US1] Implement readable validation failure display for invalid inputs in `frontend/src/workbench/ValidationFailurePanel.tsx`
 - [ ] T030 [US1] Implement document metadata review surface in `frontend/src/workbench/DocumentMetadataPanel.tsx`
 - [ ] T031 [US1] Implement unit tree display using `parent_unit_id`, `order_index`, `display_label`, and `hierarchy` in `frontend/src/workbench/UnitTree.tsx`
 - [ ] T032 [US1] Implement selected unit source, evidence, validation finding, and semantic draft display in `frontend/src/workbench/UnitReviewPanel.tsx`
 - [ ] T033 [US1] Implement semantic draft edit tracking and reviewer notes in `frontend/src/workbench/reviewSession.ts`
 - [ ] T034 [US1] Implement curation note and review decision recording in `frontend/src/workbench/ReviewArtifactPanel.tsx`
-- [ ] T035 [US1] Implement export controls for `StructuringReviewPatch`, `StructuringReviewDecision`, and `AssetCurationRecord` in `frontend/src/workbench/ArtifactExportPanel.tsx`
+- [ ] T035 [US1] Implement export controls for `StructuringReviewPatch`, `StructuringReviewDecision`, `AssetCurationRecord`, and `IntegratedStructuringReviewPackage` in `frontend/src/workbench/ArtifactExportPanel.tsx`
 - [ ] T036 [US1] Integrate the complete curation workbench route in `frontend/src/App.tsx`
 
 **Checkpoint**: User Story 1 is independently usable as the MVP.
@@ -215,7 +222,7 @@ Task: "T048 sanitized trace tests in frontend/tests/contract/runtimeTrace.contra
 1. Complete Phase 1 setup.
 2. Complete Phase 2 foundational contracts, fixtures, mock adapter, and boundary guards.
 3. Complete Phase 3 User Story 1.
-4. Stop and validate fixture load, document metadata review, unit tree review, semantic edit tracking, curation note capture, artifact export, and source JSON immutability.
+4. Stop and validate Markdown intake, JSON fixture load, document metadata review, unit tree review, semantic edit tracking, curation note capture, integrated package export, and base-output immutability.
 
 ### Incremental Delivery
 
@@ -227,6 +234,7 @@ Task: "T048 sanitized trace tests in frontend/tests/contract/runtimeTrace.contra
 ### Boundary Guardrails
 
 - Keep all implementation under `frontend/` except for 003 documentation updates.
-- Treat 001 JSON as loaded fixture/export data only.
+- Treat Markdown and 001 JSON as loaded review input only.
+- Keep Markdown conversion UI-local, draft-only, and validation-gated.
 - Treat 002 runtime contracts as replaceable frontend placeholders only.
 - Do not create backend services, API routes, database storage, model calls, retrieval, vector search, rule execution, active rules, final judgments, or raw document parsing.

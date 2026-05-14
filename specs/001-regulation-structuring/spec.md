@@ -247,6 +247,14 @@ invoke the structuring pipeline directly.
   extraction_method = deterministic, llm_assisted, or mixed, plus
   prompt_contract_version and model_trace_id when applicable. Provenance MUST NOT
   include secrets, full prompts, or unnecessary raw sensitive text.
+- **FR-040**: The pipeline contract MUST support an Admin workbench invocation
+  boundary that accepts Markdown-derived normalized input, delegates to
+  `structure_regulation`, returns StructuringPipelineOutput or structured errors,
+  and preserves the LLMClient / ModelProvider boundary for all model calls.
+- **FR-041**: Workbench-facing structuring responses MUST include only sanitized
+  trace summaries and token counts where available. They MUST NOT expose API
+  keys, full prompts, raw provider payloads, active rules, reviewed runtime
+  assets, JudgmentResult, or final compliance conclusions.
 
 ### Constitution Alignment *(mandatory for Arbiter features)*
 

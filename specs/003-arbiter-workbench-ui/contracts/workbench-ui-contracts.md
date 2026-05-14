@@ -1,123 +1,175 @@
 # Contract: Arbiter Workbench UI
 
-**Contract status**: Frontend-facing planning contract  
-**Scope**: Expert curation of 001 outputs and placeholder runtime-facing UI  
-**Out of scope**: 001 pipeline execution, 002 Agent Runtime, retrieval, vector
-search, rule execution, LLM calls, active `RulePack`, formal `RuleItem`, final
-`JudgmentResult`, final compliance conclusions, PDF/DOCX parsing, backend
-services, database storage, authentication, and API routes.
+**Contract status**: Frontend/Admin adapter planning contract
+**Scope**: Markdown-to-001 LLM-assisted structuring, expert review, integrated package export
+**Out of scope**: direct frontend model calls, PDF/DOCX parsing, 002 Agent
+Runtime execution, retrieval, vector search, rule execution, active `RulePack`,
+formal `RuleItem`, final `JudgmentResult`, final compliance conclusions,
+production identity management, and database persistence.
 
-## Input: Structuring Output Load
+## Workbench-to-001 Structuring Run
 
-The workbench accepts fixture or exported JSON conforming to 001
-`StructuringPipelineOutput`.
+The workbench triggers LLM-assisted parsing through an Admin-only adapter. The
+adapter delegates to the 001 Regulation Structuring Pipeline and returns a
+validated 001 output.
 
-Required behavior:
-- Validate the loaded shape before displaying it as editable review content.
-- Treat frontend validation as a UI mirror only; the canonical 001 contract
-  remains the existing Python/Pydantic schema.
-- Reject invalid or schema-incompatible input with readable validation feedback
-  and no editable review session.
-- Preserve the loaded JSON as read-only source data.
-- Display missing source, hierarchy, evidence, temporal, or review-status fields
-  as incomplete instead of fabricating values.
-- Allow MVP validation without running the 001 pipeline.
-
-## DocumentMetadataReviewView
+### StructuringRunRequest
 
 ```json
 {
-  "title": "Sample Policy",
-  "document_number": "POL-001",
-  "classification": {
+  "request_id": "req-001",
+  "input": {
+    "input_kind": "markdown",
+    "source_id": "src-policy-001",
+    "source_file": "investment-policy.md",
+    "raw_markdown": "# 投资管理制度\n\n第一条 公司对外投资应履行审批程序。",
     "source_type": "internal_policy",
-    "review_status": "needs_review"
+    "metadata": {
+      "title": "投资管理制度",
+      "document_number": null,
+      "effective_date": null,
+      "issuer_name": null,
+      "topic_tags": ["investment"]
+    }
   },
-  "dates": {
-    "effective_date": "2026-05-13",
-    "promulgation_date": null,
-    "repeal_date": null
-  },
-  "temporal_metadata": {
-    "version_label": "v1",
-    "validity_notes": []
-  },
-  "warnings": [],
-  "validation_findings": [],
-  "review_status": "needs_review"
+  "llm_assisted": true,
+  "model_mode": "configured_provider",
+  "requested_at": "2026-05-14T00:00:00Z"
 }
 ```
 
 Required behavior:
-- Display fields as reviewable metadata.
-- Do not mutate the loaded source JSON.
-- Show missing fields as incomplete.
+- Frontend must not include provider API keys, base URLs, raw provider payloads,
+  or model-specific secrets.
+- Adapter converts this request into 001 `NormalizedTextInput`.
+- `llm_assisted=true` authorizes only the Admin adapter/001 pipeline to use the
+  configured `ModelProvider`.
+- Empty Markdown is rejected before adapter execution when possible.
 
-## SourceOutputRef
+### StructuringRunResult
 
 ```json
 {
-  "contract_version": "v1",
-  "document_id": "doc-001",
-  "source_id": "source-001",
-  "source_file": "sample-policy.md",
-  "loaded_at": "2026-05-13T00:00:00Z"
+  "request_id": "req-001",
+  "run_id": "struct-run-001",
+  "status": "succeeded",
+  "output": {
+    "contract_version": "v1",
+    "extraction_provenance": {
+      "extraction_method": "mixed",
+      "prompt_contract_version": "structuring-v1",
+      "model_trace_id": "trace-llm"
+    },
+    "document": {},
+    "units": [],
+    "reference_candidates": [],
+    "dependency_graph": {},
+    "validation_report": {}
+  },
+  "errors": [],
+  "warnings": [],
+  "sanitized_trace": {
+    "adapter": "001-structuring",
+    "model_call_count": 3,
+    "redaction_warnings": []
+  },
+  "token_usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "completed_at": "2026-05-14T00:00:20Z"
 }
 ```
 
-Hashes are not required.
+Required behavior:
+- `output` must validate as 001 `StructuringPipelineOutput`.
+- Invalid output creates `status = validation_failed` and no editable review
+  session.
+- LLM schema-validation findings may appear in `output.validation_report` when
+  the output is still reviewable.
+- `sanitized_trace` must not include full prompts, provider payloads, API keys,
+  or unnecessary sensitive raw text.
 
-## StructuringReviewPatch
+## JSON Replay Import
+
+The workbench may import existing 001 `StructuringPipelineOutput` JSON.
+
+Required behavior:
+- Treat this as advanced replay/fixture input, not the main MVP user path.
+- Validate the loaded shape before creating a review session.
+- Preserve imported output as immutable `base_output`.
+- Display provenance and validation findings exactly as supplied.
+
+## Review Surface Contract
+
+The workbench must display these 001 output areas:
+
+- `extraction_provenance`
+- document metadata and `DocumentClassificationDraft`
+- temporal metadata
+- ordered unit tree
+- unit source text, normalized text, source location, and hierarchy
+- full `SemanticUnitDraft`
+- `ReferenceCandidate[]`
+- `DependencyEdgeDraft[]`
+- `StructuringValidationReport`
+- warnings and review statuses
+
+Missing values are shown as incomplete. The UI must not fabricate fields.
+
+## Review Artifacts
+
+### StructuringReviewPatch
 
 ```json
 {
   "source_output_ref": {
     "contract_version": "v1",
     "document_id": "doc-001",
-    "source_id": "source-001",
-    "source_file": "sample-policy.md",
-    "loaded_at": "2026-05-13T00:00:00Z"
+    "source_id": "src-policy-001",
+    "source_file": "investment-policy.md",
+    "loaded_at": "2026-05-14T00:00:20Z",
+    "structuring_run_id": "struct-run-001"
   },
   "target_type": "semantic_draft",
-  "target_id": "unit-001.semantic_draft",
+  "target_id": "unit-001.semantic_draft.summary",
   "unit_id": "unit-001",
-  "field_path": "units[0].semantic_draft.obligations[0]",
-  "old_value": "draft obligation text",
-  "new_value": "reviewed obligation text",
-  "reviewer_note": "Clarified wording against source evidence.",
+  "field_path": "semantic_draft.summary",
+  "old_value": "draft summary",
+  "new_value": "reviewed summary",
+  "reviewer_note": "Adjusted wording against source text.",
   "reviewer_decision": "needs_changes",
-  "reviewed_at": "2026-05-13T00:10:00Z",
-  "reviewer_identity": "reviewer-id-if-available"
+  "reviewed_at": "2026-05-14T00:10:00Z",
+  "reviewer_identity": null
 }
 ```
 
 Required behavior:
-- Export reviewed edits without mutating source JSON in place.
-- Keep `old_value` tied to the loaded source value.
-- Make clear whether repeated unsaved edits to the same target and `field_path`
-  export as a patch sequence or the latest consolidated patch.
-- Do not promote edited values into active rules or runtime-safe assets.
-- Treat `reviewer_identity` as optional; identity management is outside this
-  feature.
+- `old_value` is from immutable `base_output`.
+- `new_value` applies only to merged output.
+- Patch export must not duplicate full raw source unless the edited field
+  itself is source text.
 
-## StructuringReviewDecision
+### StructuringReviewDecision
 
 ```json
 {
   "source_output_ref": {
     "contract_version": "v1",
     "document_id": "doc-001",
-    "source_id": "source-001",
-    "source_file": "sample-policy.md",
-    "loaded_at": "2026-05-13T00:00:00Z"
+    "source_id": "src-policy-001",
+    "source_file": "investment-policy.md",
+    "loaded_at": "2026-05-14T00:00:20Z",
+    "structuring_run_id": "struct-run-001"
   },
   "target_type": "dependency_edge",
   "target_id": "edge-001",
   "unit_id": "unit-001",
-  "reviewer_decision": "needs_more_evidence",
-  "reviewer_note": "Target unit is ambiguous.",
-  "reviewed_at": "2026-05-13T00:12:00Z",
-  "reviewer_identity": "reviewer-id-if-available"
+  "reviewer_decision": "approved",
+  "reviewer_note": "Cross-reference is supported by source text.",
+  "reviewed_at": "2026-05-14T00:12:00Z",
+  "reviewer_identity": null
 }
 ```
 
@@ -129,131 +181,79 @@ Allowed `target_type` values:
 - `dependency_edge`
 - `curation_note`
 
-## AssetCurationRecord
+Allowed `reviewer_decision` values:
+- `approved`
+- `rejected`
+- `needs_changes`
+- `needs_more_evidence`
+- `not_applicable`
+- `superseded`
+
+## ReviewGateReport
 
 ```json
 {
+  "status": "needs_review",
+  "required_target_counts": {
+    "document": 1,
+    "semantic_draft": 10,
+    "reference_candidate": 2,
+    "dependency_edge": 1
+  },
+  "completed_target_counts": {
+    "document": 1,
+    "semantic_draft": 9,
+    "reference_candidate": 2,
+    "dependency_edge": 1
+  },
+  "blocking_validation_findings": [],
+  "remaining_review_reasons": [
+    "1 semantic draft target still requires an explicit review decision."
+  ]
+}
+```
+
+Required behavior:
+- Status is `reviewed_for_structuring` only when no blocking findings remain
+  and required targets are decided.
+- Review gates are visible before export.
+- `reviewed_for_structuring` remains Admin-only and not runtime-safe.
+
+## IntegratedStructuringReviewPackage
+
+```json
+{
+  "package_version": "v1",
+  "package_id": "pkg-001",
+  "input_kind": "markdown",
+  "source_markdown": "# 投资管理制度\n\n第一条 公司对外投资应履行审批程序。",
   "source_output_ref": {
     "contract_version": "v1",
     "document_id": "doc-001",
-    "source_id": "source-001",
-    "source_file": "sample-policy.md",
-    "loaded_at": "2026-05-13T00:00:00Z"
+    "source_id": "src-policy-001",
+    "source_file": "investment-policy.md",
+    "loaded_at": "2026-05-14T00:00:20Z",
+    "structuring_run_id": "struct-run-001"
   },
-  "curation_id": "curation-001",
-  "note_type": "scenario_example",
-  "target_type": "unit",
-  "target_id": "unit-001",
-  "unit_id": "unit-001",
-  "note": "Useful future scenario: investment approval threshold review.",
-  "created_at": "2026-05-13T00:15:00Z",
-  "review_status": "needs_review",
-  "reviewer_identity": "reviewer-id-if-available"
-}
-```
-
-Allowed `note_type` values:
-- `expert_note`
-- `candidate_rule_hint`
-- `scenario_example`
-- `ambiguity_case`
-- `dependency_issue`
-
-These records are curation material only.
-
-## RuntimeScenarioInput
-
-```json
-{
-  "scenario_id": "scenario-001",
-  "question": "Can this investment proceed under the current policy?",
-  "structured_fields": {
-    "transaction_type": "investment",
-    "amount": "example only"
+  "base_output": {},
+  "review_patches": [],
+  "review_decisions": [],
+  "curation_records": [],
+  "merged_output": {},
+  "review_gate_report": {
+    "status": "reviewed_for_structuring",
+    "remaining_review_reasons": []
   },
-  "as_of_date": "2026-05-13"
-}
-```
-
-This is a placeholder UI contract, not a final 002 input schema.
-
-## RuntimeJudgmentDraftView
-
-```json
-{
-  "draft_id": "draft-001",
-  "scenario_id": "scenario-001",
-  "status": "draft",
-  "summary": "Mock judgment draft for UI inspection only.",
-  "confidence": 0.72,
-  "warnings": ["Mock response"],
-  "validation_status": "needs_review",
-  "human_review_required": true,
-  "citations": [],
-  "evidence": [],
-  "trace": {
-    "trace_id": "trace-001",
-    "steps": [],
-    "redaction_warnings": []
-  }
+  "package_status": "reviewed_for_structuring",
+  "exported_at": "2026-05-14T00:20:00Z"
 }
 ```
 
 Required behavior:
-- Label as draft and non-final.
-- Render only data supplied by a mocked or future adapter.
-- Do not call LLMs, retrieval, rule execution, or 002 runtime logic.
-- Remain replaceable once 002 finalizes its runtime schemas.
-- Must not be treated as backend or domain-level 002 schemas.
-
-## RuntimeCitationView
-
-```json
-{
-  "citation_id": "citation-001",
-  "unit_id": "unit-001",
-  "document_id": "doc-001",
-  "source_version": "v1",
-  "article_or_clause": "Article 1",
-  "provenance": "mock-adapter",
-  "as_of_date": "2026-05-13"
-}
-```
-
-Required behavior:
-- Flag missing `unit_id` or `document_id` as incomplete.
-- Treat free-text-only labels as insufficient.
-
-## RuntimeEvidenceView
-
-```json
-{
-  "evidence_id": "evidence-001",
-  "unit_id": "unit-001",
-  "excerpt": "Bounded evidence excerpt.",
-  "dependency_context": ["edge-001"],
-  "provenance": "mock-adapter",
-  "as_of_date": "2026-05-13"
-}
-```
-
-## RuntimeTraceView
-
-```json
-{
-  "trace_id": "trace-001",
-  "steps": [
-    {
-      "step_id": "step-001",
-      "label": "Mock adapter returned draft",
-      "status": "completed"
-    }
-  ],
-  "redaction_warnings": []
-}
-```
-
-Required behavior:
-- Show sanitized summaries only.
-- Block or redact secrets, full prompts, provider payloads, and unnecessary
-  sensitive raw text.
+- Preserve immutable base output.
+- Apply review patches only to merged output.
+- Include source Markdown for Markdown-origin sessions.
+- Include extraction provenance from 001.
+- Do not include secrets, full prompts, raw provider payloads, active rules, or
+  final judgments.
+- Do not claim runtime-safe reviewed status.

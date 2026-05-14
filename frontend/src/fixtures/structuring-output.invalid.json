@@ -1,0 +1,59 @@
+{
+  "contract_version": "",
+  "extraction_provenance": {
+    "extraction_method": "invalid_method"
+  },
+  "document": {
+    "document_id": "",
+    "source_id": "source-bad",
+    "source_file": "bad.md",
+    "classification": {
+      "source_type": "unknown"
+    },
+    "temporal_metadata": {
+      "version_label": null
+    },
+    "parse_status": "needs_review",
+    "warnings": [],
+    "review_status": "needs_review"
+  },
+  "units": [
+    {
+      "unit_id": "unit-bad-1",
+      "document_id": "mismatch-doc",
+      "parent_unit_id": null,
+      "order_index": -1,
+      "unit_kind": "unknown",
+      "source_id": "source-bad",
+      "source_file": "bad.md",
+      "source_location": {
+        "kind": "unknown"
+      },
+      "hierarchy": {},
+      "original_text": "   ",
+      "semantic_draft": {
+        "unit_type": "unknown",
+        "review_status": "needs_review"
+      },
+      "review_status": "needs_review",
+      "warnings": []
+    }
+  ],
+  "reference_candidates": [],
+  "dependency_graph": {
+    "graph_id": "graph-bad",
+    "document_id": "mismatch-doc",
+    "reference_candidate_ids": [],
+    "dependency_edges": [],
+    "warnings": []
+  },
+  "validation_report": {
+    "document_id": "another-mismatch",
+    "summary": "Bad report",
+    "findings": [],
+    "error_count": 0,
+    "warning_count": 0,
+    "info_count": 0,
+    "has_errors": false
+  }
+}

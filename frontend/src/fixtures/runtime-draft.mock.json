@@ -1,0 +1,42 @@
+{
+  "draft_id": "draft-001",
+  "scenario_id": "scenario-001",
+  "status": "draft",
+  "summary": "Mock judgment draft for UI inspection only. This is not a final compliance decision.",
+  "confidence": 0.72,
+  "warnings": ["Mock response", "Not a final compliance decision"],
+  "validation_status": "needs_review",
+  "human_review_required": true,
+  "citations": [
+    {
+      "citation_id": "citation-001",
+      "unit_id": "unit-005",
+      "document_id": "doc-001",
+      "source_version": "v1.0-draft",
+      "article_or_clause": "Article 3",
+      "provenance": "mock-adapter",
+      "as_of_date": "2026-05-13"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "evidence-001",
+      "unit_id": "unit-005",
+      "excerpt": "No investment exceeding $1,000,000 shall be made without prior written approval...",
+      "dependency_context": [],
+      "provenance": "mock-adapter",
+      "as_of_date": "2026-05-13"
+    }
+  ],
+  "trace": {
+    "trace_id": "trace-001",
+    "steps": [
+      {
+        "step_id": "step-001",
+        "label": "Mock adapter returned draft",
+        "status": "completed"
+      }
+    ],
+    "redaction_warnings": []
+  }
+}
