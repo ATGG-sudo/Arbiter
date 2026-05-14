@@ -11,6 +11,8 @@
 
 ### ParseStatus
 
+- `parsed`
+- `partial`
 - `needs_review`
 - `failed`
 
@@ -46,6 +48,7 @@ or an internal policy when that information is supplied or recognizable.
 - `self_regulatory_organization`
 - `internal_org`
 - `external_other`
+- `joint_issuers`
 - `unknown`
 
 Issuer type is intentionally coarse. Detailed issuer names and compliance topics
@@ -87,6 +90,23 @@ All relation kinds are draft interpretations until human review. Semantic
 relation kinds such as `definition_applies`, `procedure_for`, `condition_for`,
 and `exception_to` are optional/future extension points unless clear textual
 evidence supports them.
+
+### SemanticUnitType
+
+- `definition`
+- `obligation`
+- `prohibition`
+- `procedure`
+- `exception`
+- `condition`
+- `reporting`
+- `threshold`
+- `authorization`
+- `liability`
+- `general`
+- `unknown`
+
+The default for `SemanticUnitDraft.unit_type` is `unknown`.
 
 ## Entities
 
@@ -149,6 +169,7 @@ Extensible category/tag record for document classification.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
+| `category_scheme` | string | yes | `external_regulation_type`, `internal_policy_type`, `business_domain`, `compliance_topic`, or `custom`; defaults to `custom` |
 | `category_code` | string or null | no | Optional stable category code when available |
 | `category_label` | string or null | no | Human-readable category label |
 | `tags` | list[string] | yes | Extensible tags; not an exhaustive taxonomy |
@@ -197,7 +218,7 @@ Represents the best available source location for a unit.
 |-------|------|----------|-------|
 | `kind` | SourceLocationKind | yes | May be page, line, paragraph, heading path, or unknown |
 | `value` | string | no | Human-readable location value |
-| `confidence` | string | no | Optional confidence label such as `explicit`, `derived`, or `unknown` |
+| `confidence` | number or null | no | Optional confidence score from 0.0 to 1.0 |
 
 Validation rules:
 - `kind = unknown` may omit `value`.
@@ -211,6 +232,9 @@ Reviewable version and validity context for a document.
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `version_label` | string or null | no | Source version, amendment label, or release label when available |
+| `effective_date_text` | string or null | no | Source text supporting effective date extraction when available |
+| `promulgation_date_text` | string or null | no | Source text supporting promulgation date extraction when available |
+| `repeal_date_text` | string or null | no | Source text supporting repeal date extraction when available |
 | `amendment_history_text` | string or null | no | Bounded source text describing amendments when available |
 | `validity_notes` | list[string] | yes | Validity or temporal review notes |
 | `temporal_confidence` | number or null | no | Optional confidence score |
@@ -250,6 +274,7 @@ Document-level draft metadata for the submitted regulation or policy.
 | `source_file` | string | yes | Traceable source file label |
 | `classification` | DocumentClassificationDraft | yes | Draft classification for source type, issuer, category, and tags |
 | `title` | string or null | yes | Unknown when absent |
+| `document_number` | string or null | no | Document number or issuance number when available |
 | `document_status` | DocumentStatus | yes | Defaults to `unknown` when not recognizable |
 | `effective_date` | date or null | yes | Null when unknown |
 | `promulgation_date` | date or null | yes | Null when unknown |
@@ -257,6 +282,7 @@ Document-level draft metadata for the submitted regulation or policy.
 | `temporal_metadata` | TemporalMetadata | yes | Version, amendment, validity, and ambiguity context |
 | `parse_status` | ParseStatus | yes | Defaults to `needs_review` |
 | `warnings` | list[string] | yes | Document-level warning codes or messages |
+| `review_status` | ReviewStatus | yes | Defaults to `needs_review` |
 
 Validation rules:
 - `parse_status` must default to `needs_review`.
@@ -271,12 +297,17 @@ Structured path for a unit inside the document.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
+| `part` | string or null | no | Part label/title when present |
 | `chapter` | string or null | no | Chapter label/title when present |
 | `section` | string or null | no | Section label/title when present |
 | `article_number` | string or null | no | Article number when present |
 | `article_title` | string or null | no | Article title when present |
+| `paragraph_number` | string or null | no | Paragraph label when present |
 | `paragraph_index` | integer or null | no | Paragraph order inside article |
+| `item_number` | string or null | no | Item number when present |
 | `item_label` | string or null | no | Item marker when present |
+| `subitem_number` | string or null | no | Subitem number when present |
+| `heading_path` | list[string] | yes | Preserved heading labels when available |
 
 Validation rules:
 - Values are preserved as document labels where practical.
@@ -288,8 +319,9 @@ Schema-constrained semantic draft fields for a regulation unit.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `unit_type` | string or null | no | Draft semantic type such as definition, obligation, exception, condition, procedure, or other |
+| `unit_type` | SemanticUnitType | yes | Primary draft semantic type; defaults to `unknown` |
 | `normalized_title` | string or null | no | Normalized title when language understanding is needed |
+| `summary` | string or null | no | Brief human-reviewable summary of the unit |
 | `definitions` | list[string] | yes | Draft definitions detected in the unit |
 | `obligations` | list[string] | yes | Draft obligations detected in the unit |
 | `exceptions` | list[string] | yes | Draft exceptions detected in the unit |
@@ -329,6 +361,8 @@ Reviewable structured unit extracted from the source document.
 | `document_id` | string | yes | Parent document draft |
 | `parent_unit_id` | string or null | yes | Parent unit for explicit tree navigation; null for roots |
 | `order_index` | integer | yes | Stable order among sibling units |
+| `unit_level` | integer or null | no | Numeric hierarchy depth when available |
+| `unit_kind` | string | yes | `part`, `chapter`, `section`, `article`, `paragraph`, `item`, `subitem`, `appendix`, or `unknown`; defaults to `unknown` |
 | `display_label` | string or null | no | Review UI label when available |
 | `source_id` | string | yes | Original source input |
 | `source_file` | string | yes | Traceable source file label |
@@ -438,6 +472,9 @@ One structured warning or error.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
+| `stage` | string | yes | `input`, `document`, `unit`, `semantic`, `reference`, `dependency`, or `output`; defaults to `output` |
+| `target_type` | string | yes | `document`, `unit`, `semantic_draft`, `reference_candidate`, `dependency_edge`, `pipeline_output`, or `unknown`; defaults to `unknown` |
+| `target_id` | string or null | no | Related target identifier when available |
 | `code` | string | yes | Stable machine-readable finding code |
 | `severity` | ValidationSeverity | yes | info/warning/error |
 | `message` | string | yes | Human-readable summary |
@@ -454,6 +491,9 @@ Structured report for parser confidence and review needs.
 | `document_id` | string | yes | Parent document draft |
 | `summary` | string | yes | Bounded review summary |
 | `findings` | list[StructuringValidationFinding] | yes | All warnings/errors |
+| `error_count` | integer | yes | Count of error findings; derived from findings |
+| `warning_count` | integer | yes | Count of warning findings; derived from findings |
+| `info_count` | integer | yes | Count of info findings; derived from findings |
 | `has_errors` | boolean | yes | True when any error-level finding exists |
 
 Validation rules:

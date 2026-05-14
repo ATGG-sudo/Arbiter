@@ -42,7 +42,8 @@ recovery.
   "text": "string",
   "metadata": {
     "title": "string or null",
-    "issuer_type": "government_regulator | self_regulatory_organization | internal_org | external_other | unknown",
+    "document_number": "string or null",
+    "issuer_type": "government_regulator | self_regulatory_organization | internal_org | external_other | joint_issuers | unknown",
     "issuer_name": "string or null",
     "category_tags": ["string"],
     "topic_tags": ["string"],
@@ -85,10 +86,11 @@ Required behavior:
     "source_file": "string",
     "classification": {
       "source_type": "external_regulation | internal_policy | unknown",
-      "issuer_type": "government_regulator | self_regulatory_organization | internal_org | external_other | unknown",
+      "issuer_type": "government_regulator | self_regulatory_organization | internal_org | external_other | joint_issuers | unknown",
       "issuer_name": "string or null",
       "categories": [
         {
+          "category_scheme": "external_regulation_type | internal_policy_type | business_domain | compliance_topic | custom",
           "category_code": "string or null",
           "category_label": "string or null",
           "tags": ["string"],
@@ -105,19 +107,24 @@ Required behavior:
       "ambiguity_notes": ["string"]
     },
     "title": "string or null",
+    "document_number": "string or null",
     "document_status": "official | draft_for_comment | deprecated | unknown",
     "effective_date": "YYYY-MM-DD or null",
     "promulgation_date": "YYYY-MM-DD or null",
     "repeal_date": "YYYY-MM-DD or null",
     "temporal_metadata": {
       "version_label": "string or null",
+      "effective_date_text": "string or null",
+      "promulgation_date_text": "string or null",
+      "repeal_date_text": "string or null",
       "amendment_history_text": "string or null",
       "validity_notes": ["string"],
       "temporal_confidence": "number or null",
       "ambiguity_notes": ["string"]
     },
-    "parse_status": "needs_review",
-    "warnings": ["string"]
+    "parse_status": "parsed | partial | needs_review | failed",
+    "warnings": ["string"],
+    "review_status": "needs_review"
   },
   "units": [
     {
@@ -125,27 +132,35 @@ Required behavior:
       "document_id": "string",
       "parent_unit_id": "string or null",
       "order_index": "integer",
+      "unit_level": "integer or null",
+      "unit_kind": "part | chapter | section | article | paragraph | item | subitem | appendix | unknown",
       "display_label": "string or null",
       "source_id": "string",
       "source_file": "string",
       "source_location": {
         "kind": "page_number | line_number | paragraph_index | heading_path | unknown",
         "value": "string or null",
-        "confidence": "string or null"
+        "confidence": "number or null"
       },
       "hierarchy": {
+        "part": "string or null",
         "chapter": "string or null",
         "section": "string or null",
         "article_number": "string or null",
         "article_title": "string or null",
+        "paragraph_number": "string or null",
         "paragraph_index": "integer or null",
-        "item_label": "string or null"
+        "item_number": "string or null",
+        "item_label": "string or null",
+        "subitem_number": "string or null",
+        "heading_path": ["string"]
       },
       "original_text": "string",
       "normalized_text": "string or null",
       "semantic_draft": {
-        "unit_type": "string or null",
+        "unit_type": "definition | obligation | prohibition | procedure | exception | condition | reporting | threshold | authorization | liability | general | unknown",
         "normalized_title": "string or null",
+        "summary": "string or null",
         "definitions": ["string"],
         "obligations": ["string"],
         "exceptions": ["string"],
@@ -179,7 +194,7 @@ Required behavior:
       "source_location": {
         "kind": "page_number | line_number | paragraph_index | heading_path | unknown",
         "value": "string or null",
-        "confidence": "string or null"
+        "confidence": "number or null"
       },
       "confidence": "number or null",
       "ambiguity_notes": ["string"],
@@ -217,6 +232,9 @@ Required behavior:
     "summary": "string",
     "findings": [
       {
+        "stage": "input | document | unit | semantic | reference | dependency | output",
+        "target_type": "document | unit | semantic_draft | reference_candidate | dependency_edge | pipeline_output | unknown",
+        "target_id": "string or null",
         "code": "string",
         "severity": "info | warning | error",
         "message": "string",
@@ -225,25 +243,33 @@ Required behavior:
         "source_location": {
           "kind": "page_number | line_number | paragraph_index | heading_path | unknown",
           "value": "string or null",
-          "confidence": "string or null"
+          "confidence": "number or null"
         }
       }
     ],
+    "error_count": 0,
+    "warning_count": 0,
+    "info_count": 0,
     "has_errors": true
   }
 }
 ```
 
 Required behavior:
-- Document drafts default to `parse_status = needs_review`.
+- Document drafts default to `parse_status = needs_review`; `parsed`,
+  `partial`, and `failed` are schema-supported status values.
+- Document drafts include document-level `review_status = needs_review` in this
+  feature.
 - Document classification drafts default to `review_status = needs_review`.
 - Semantic unit drafts, unit drafts, and dependency edge drafts default to
   `review_status = needs_review`.
 - `ReviewStatus` also reserves `approved`, `rejected`, and `superseded` for
   later review or promotion workflows. This pipeline must not assign those
   statuses.
-- `HierarchyPath` preserves source document labels. `parent_unit_id` and
-  `order_index` support explicit tree navigation and stable review UI rendering.
+- `HierarchyPath` preserves source document labels including part, chapter,
+  section, article, paragraph, item, subitem, and heading-path labels where
+  available. `parent_unit_id`, `order_index`, `unit_level`, and `unit_kind`
+  support explicit tree navigation and stable review UI rendering.
 - Temporal metadata preserves version, amendment, validity, confidence, and
   ambiguity context when available. Missing or uncertain temporal facts stay
   null or explicit review notes.

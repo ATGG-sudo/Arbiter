@@ -13,14 +13,30 @@ import pytest
 # it exists instead of introducing a parallel model access layer.
 # Real import path found in this checkout: none.
 # Test-local expected signature:
-#   provider.structured_output(schema=<PydanticModel>, payload=<dict>) -> model
+#   provider.structured_output(schema=<PydanticModel>, prompt=<str>, context=<dict>) -> model | None
 class MockModelProvider:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
+        self._responses: list[dict[str, Any] | None] = []
 
-    def structured_output(self, *, schema: Callable[..., Any], payload: dict[str, Any]) -> Any:
-        self.calls.append({"schema": schema, "payload": payload})
-        return schema.model_validate(payload)
+    def queue_response(self, payload: dict[str, Any] | None) -> None:
+        """Queue a test payload to be returned on the next structured_output call."""
+        self._responses.append(payload)
+
+    def structured_output(
+        self,
+        *,
+        schema: Callable[..., Any],
+        prompt: str,
+        context: dict[str, Any] | None = None,
+    ) -> Any:
+        self.calls.append({"schema": schema, "prompt": prompt, "context": context})
+        if self._responses:
+            payload = self._responses.pop(0)
+            if payload is not None:
+                return schema.model_validate(payload)
+            return None
+        return None
 
 
 class BlockingModelProvider:

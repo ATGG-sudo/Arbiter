@@ -45,15 +45,15 @@
 
 **Independent Test**: Submit a fixture regulation with recognizable hierarchy and verify `RegulationDocumentDraft`, `RegulationUnitDraft[]`, `StructuringValidationReport`, and no judgment or formal rule output.
 
-- [ ] T017 [P] [US1] Write failing intake tests for direct Markdown and normalized text inputs plus the optional `FileInput -> ExtractedTextBundle -> NormalizedTextInput` boundary in `tests/structuring/test_intake.py`
-- [ ] T018 [P] [US1] Write failing structure-first splitting tests for Markdown headings, `第X条` / `Article X`, numbered paragraphs or list items, paragraph fallback, and token-count fallback warnings in `tests/structuring/test_structure_first_splitting.py`
-- [ ] T019 [P] [US1] Write failing pipeline happy-path tests for draft document output, draft unit list, validation report, and forbidden-output exclusion in `tests/structuring/test_regulation_structuring_pipeline.py`
-- [ ] T020 [P] [US1] Write failing mock LLM schema-validation tests proving LLM boundary proposals only supplement deterministic candidates, accepted proposals pass Pydantic validation, ambiguous proposals create validation findings, and invalid model output is rejected in `tests/structuring/test_llm_structuring_validation.py`
-- [ ] T021 [US1] Implement Markdown and normalized text intake plus the optional file-intake adapter boundary without OCR, password handling, or full layout recovery in `src/arbiter/structuring/intake.py`
-- [ ] T022 [US1] Implement structure-first deterministic candidate splitting by Markdown headings, `第X条` / `Article X`, numbered paragraphs or list items, and paragraph fallback; allow token-count splitting only as a last-resort warning in `src/arbiter/structuring/extraction.py`
-- [ ] T023 [US1] Implement LLM-assisted extraction wrapper through existing `LLMClient` / `ModelProvider` so LLM proposals only supplement deterministic candidates and Pydantic failures become validation findings in `src/arbiter/structuring/llm_extraction.py`
-- [ ] T024 [US1] Implement `RegulationStructuringPipeline` orchestration that emits only draft assets plus validation data in `src/arbiter/structuring/pipeline.py`
-- [ ] T025 [US1] Verify US1 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_intake.py tests/structuring/test_structure_first_splitting.py tests/structuring/test_regulation_structuring_pipeline.py tests/structuring/test_llm_structuring_validation.py -q`
+- [X] T017 [P] [US1] Write failing intake tests for direct Markdown and normalized text inputs plus the optional `FileInput -> ExtractedTextBundle -> NormalizedTextInput` boundary in `tests/structuring/test_intake.py`
+- [X] T018 [P] [US1] Write failing structure-first splitting tests for Markdown headings, `第X条` / `Article X`, numbered paragraphs or list items, paragraph fallback, and char-count fallback warnings in `tests/structuring/test_structure_first_splitting.py`
+- [X] T019 [P] [US1] Write failing pipeline happy-path tests for draft document output, draft unit list, validation report, and forbidden-output exclusion in `tests/structuring/test_regulation_structuring_pipeline.py`
+- [X] T020 [P] [US1] Write failing mock LLM schema-validation tests proving LLM boundary proposals only supplement deterministic candidates, accepted proposals pass Pydantic validation, ambiguous proposals create validation findings, and invalid model output is rejected in `tests/structuring/test_llm_structuring_validation.py`
+- [X] T021 [US1] Implement Markdown and normalized text intake plus the optional file-intake adapter boundary without OCR, password handling, or full layout recovery in `src/arbiter/structuring/intake.py`
+- [X] T022 [US1] Implement structure-first deterministic candidate splitting by Markdown headings, `第X条` / `Article X`, numbered paragraphs or list items, and paragraph fallback; allow char-count splitting only as a last-resort warning in `src/arbiter/structuring/extraction.py`
+- [X] T023 [US1] Implement LLM-assisted extraction wrapper through a minimal `provider.structured_output(schema=..., prompt=..., context=...)` protocol so LLM proposals only supplement deterministic candidates and Pydantic failures become validation findings in `src/arbiter/structuring/llm_extraction.py`
+- [X] T024 [US1] Implement `RegulationStructuringPipeline` orchestration that emits only draft assets plus validation data in `src/arbiter/structuring/pipeline.py`
+- [X] T025 [US1] Verify US1 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_intake.py tests/structuring/test_structure_first_splitting.py tests/structuring/test_regulation_structuring_pipeline.py tests/structuring/test_llm_structuring_validation.py -q`
 
 ## Phase 4: User Story 2 - Inspect Traceable Units (P2)
 
@@ -61,13 +61,13 @@
 
 **Independent Test**: Inspect generated draft units and verify source text, hierarchy labels, parent/order/display metadata, temporal metadata, and ambiguity findings.
 
-- [ ] T026 [P] [US2] Write failing tests for `SourceLocation`, `original_text`, stable `source_id` / `document_id` linkage, and hierarchy label preservation in `tests/structuring/test_traceable_units.py`
-- [ ] T027 [P] [US2] Write failing tests for `parent_unit_id`, `order_index`, and `display_label` tree rendering invariants in `tests/structuring/test_unit_tree.py`
-- [ ] T028 [P] [US2] Write failing tests for `TemporalMetadata` fields, null/unknown handling, amendment notes, validity notes, and temporal ambiguity findings in `tests/structuring/test_temporal_metadata.py`
-- [ ] T029 [US2] Implement source location, original text preservation, hierarchy path labels, and stable `source_id` / `document_id` linkage in `src/arbiter/structuring/extraction.py`
-- [ ] T030 [US2] Implement explicit unit tree assignment for `parent_unit_id`, `order_index`, and `display_label` in `src/arbiter/structuring/extraction.py`
-- [ ] T031 [US2] Implement temporal/version validation findings for missing, uncertain, or conflicting temporal metadata in `src/arbiter/structuring/validation.py`
-- [ ] T032 [US2] Verify US2 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_traceable_units.py tests/structuring/test_unit_tree.py tests/structuring/test_temporal_metadata.py -q`
+- [X] T026 [P] [US2] Write failing tests for `SourceLocation`, `original_text`, stable `source_id` / `document_id` linkage, and hierarchy label preservation in `tests/structuring/test_traceable_units.py`
+- [X] T027 [P] [US2] Write failing tests for `parent_unit_id`, `order_index`, and `display_label` tree rendering invariants in `tests/structuring/test_unit_tree.py`
+- [X] T028 [P] [US2] Write failing tests for `TemporalMetadata` fields, null/unknown handling, amendment notes, validity notes, and temporal ambiguity findings in `tests/structuring/test_temporal_metadata.py`
+- [X] T029 [US2] Implement source location, original text preservation, hierarchy path labels, stable `source_id` / `document_id` linkage, and metadata mapping (document_number, category_tags, date_text) in `src/arbiter/structuring/extraction.py`
+- [X] T030 [US2] Implement explicit unit tree assignment for `parent_unit_id`, `order_index`, and `display_label` in `src/arbiter/structuring/extraction.py`
+- [X] T031 [US2] Implement temporal/version validation findings for missing, uncertain, or conflicting temporal metadata, and preserve date text fields in `src/arbiter/structuring/validation.py` / `src/arbiter/structuring/extraction.py`
+- [X] T032 [US2] Verify US2 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_traceable_units.py tests/structuring/test_unit_tree.py tests/structuring/test_temporal_metadata.py -q`
 
 ## Phase 5: User Story 3 - Review Warnings and Draft Semantics (P3)
 
@@ -75,13 +75,13 @@
 
 **Independent Test**: Process ambiguous fixtures and verify validation findings, separated reference candidates, draft dependency edges, and evidence-backed semantic draft fields.
 
-- [ ] T033 [P] [US3] Write failing validation report tests for duplicate article numbers, malformed hierarchy, invalid tree links, missing provenance, conflicting dates, schema failures, ambiguous boundaries, and unclear references in `tests/structuring/test_structuring_validation_report.py`
-- [ ] T034 [P] [US3] Write failing tests proving `ReferenceCandidate` and `DependencyEdgeDraft` / `RegulationUnitRelationDraft` remain separate draft/unresolved structures, cross-document links stay ambiguous unless clearly supported by provided text, external document title clues do not trigger database or asset-registry lookup, and no `ReviewedDependencyEdge` is produced in `tests/structuring/test_reference_dependency_graph.py`
-- [ ] T035 [P] [US3] Write failing expanded `SemanticUnitDraft` tests for `trigger_events`, `required_actions`, `prohibited_actions`, `deadlines`, `thresholds`, `subject_scope`, `object_scope`, and `reporting_obligations` with evidence and `needs_review` status in `tests/structuring/test_semantic_unit_draft.py`
-- [ ] T036 [US3] Implement `StructuringValidationReport` assembly and validation finding codes in `src/arbiter/structuring/validation.py`
-- [ ] T037 [US3] Implement internal reference detection, external document title clue capture, and separate `DependencyEdgeDraft` / `RegulationUnitRelationDraft` graph assembly while keeping cross-document links draft/unresolved unless clearly supported by provided text, without database lookup, local asset-registry lookup, final reviewed links, or `ReviewedDependencyEdge` output in `src/arbiter/structuring/extraction.py`
-- [ ] T038 [US3] Implement expanded `SemanticUnitDraft` mapping from validated mock LLM outputs while keeping all semantic fields draft-only in `src/arbiter/structuring/llm_extraction.py`
-- [ ] T039 [US3] Verify US3 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_structuring_validation_report.py tests/structuring/test_reference_dependency_graph.py tests/structuring/test_semantic_unit_draft.py -q`
+- [X] T033 [P] [US3] Write failing validation report tests for duplicate article numbers, malformed hierarchy, invalid tree links, missing provenance, conflicting dates, schema failures, ambiguous boundaries, and unclear references in `tests/structuring/test_structuring_validation_report.py`
+- [X] T034 [P] [US3] Write failing tests proving `ReferenceCandidate` and `DependencyEdgeDraft` / `RegulationUnitRelationDraft` remain separate draft/unresolved structures, cross-document links stay ambiguous unless clearly supported by provided text, external document title clues do not trigger database or asset-registry lookup, and no `ReviewedDependencyEdge` is produced in `tests/structuring/test_reference_dependency_graph.py`
+- [X] T035 [P] [US3] Write failing expanded `SemanticUnitDraft` tests for `trigger_events`, `required_actions`, `prohibited_actions`, `deadlines`, `thresholds`, `subject_scope`, `object_scope`, and `reporting_obligations` with evidence and `needs_review` status in `tests/structuring/test_semantic_unit_draft.py`
+- [X] T036 [US3] Implement `StructuringValidationReport` assembly and validation finding codes in `src/arbiter/structuring/validation.py`
+- [X] T037 [US3] Implement internal reference detection, external document title clue capture, and separate `DependencyEdgeDraft` / `RegulationUnitRelationDraft` graph assembly while keeping cross-document links draft/unresolved unless clearly supported by provided text, without database lookup, local asset-registry lookup, final reviewed links, or `ReviewedDependencyEdge` output in `src/arbiter/structuring/extraction.py`
+- [X] T038 [US3] Implement expanded `SemanticUnitDraft` mapping from validated mock LLM outputs while keeping all semantic fields draft-only in `src/arbiter/structuring/llm_extraction.py`
+- [X] T039 [US3] Verify US3 with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring/test_structuring_validation_report.py tests/structuring/test_reference_dependency_graph.py tests/structuring/test_semantic_unit_draft.py -q`
 
 ## Phase 6: User Story 4 - Preserve Runtime Boundary (P4)
 
@@ -101,9 +101,9 @@
 
 **Purpose**: Confirm documentation and full feature slice remain aligned.
 
-- [ ] T047 [P] Update quickstart command and artifact path notes for the implemented Admin-only structuring slice in `specs/001-regulation-structuring/quickstart.md`
-- [ ] T048 Run the full structuring test slice with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring -q`
-- [ ] T049 Check contract examples and JSON blocks remain aligned with implemented schema names in `specs/001-regulation-structuring/contracts/structuring-pipeline-contract.md`
+- [X] T047 [P] Update quickstart command and artifact path notes for the implemented Admin-only structuring slice in `specs/001-regulation-structuring/quickstart.md`
+- [X] T048 Run the full structuring test slice with `PYTHONPATH=src ./.venv/bin/python -m pytest tests/structuring -q`
+- [X] T049 Check contract examples and JSON blocks remain aligned with implemented schema names in `specs/001-regulation-structuring/contracts/structuring-pipeline-contract.md`
 - [ ] T050 Verify no forbidden runtime artifacts, ComplianceJudgmentAgent exposure, real model calls in tests, database or local asset-registry lookup, reviewed dependency edges, final compliance conclusions, secrets, full prompts, provider payloads, absolute local paths, or unnecessary raw sensitive text are introduced by scanning `src/arbiter/` and `tests/structuring/`
 
 ## Dependencies

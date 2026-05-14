@@ -34,10 +34,11 @@ exporting review or curation artifacts that reference the original output.
 **Acceptance Scenarios**:
 
 1. **Given** a valid `StructuringPipelineOutput` JSON, **When** the expert opens it, **Then** the workbench displays a navigable unit tree using `parent_unit_id`, `order_index`, `display_label`, `hierarchy`, warnings, and `review_status`.
-2. **Given** a selected regulation unit, **When** the expert reviews it, **Then** the workbench shows original text, normalized text, source location, evidence text, validation findings, and editable semantic draft fields side by side.
-3. **Given** an edited semantic draft field, **When** the expert exports the review result, **Then** the workbench saves a separate `StructuringReviewPatch` containing `source_output_ref`, `target_type`, `target_id`, `field_path`, `old_value`, `new_value`, `reviewer_note`, `reviewer_decision`, `reviewed_at`, and optional `unit_id`.
-4. **Given** the expert records a document, unit, semantic draft, reference candidate, dependency edge, or curation-note decision, **When** the decision is exported, **Then** the workbench saves a separate `StructuringReviewDecision` linked to the same source output.
-5. **Given** the source 001 JSON is loaded, **When** the expert saves review work, **Then** the original 001 output remains unchanged and all review changes are captured in separate review or curation artifacts.
+2. **Given** the document metadata panel is open, **When** the expert reviews draft document metadata, **Then** the workbench shows title, `document_number`, classification, dates, temporal metadata, warnings, validation findings, and `review_status` as reviewable fields without mutating the loaded source JSON.
+3. **Given** a selected regulation unit, **When** the expert reviews it, **Then** the workbench shows original text, normalized text, source location, evidence text, validation findings, and editable semantic draft fields side by side.
+4. **Given** an edited semantic draft field, **When** the expert exports the review result, **Then** the workbench saves a separate `StructuringReviewPatch` containing `source_output_ref`, `target_type`, `target_id`, `field_path`, `old_value`, `new_value`, `reviewer_note`, `reviewer_decision`, `reviewed_at`, and optional `unit_id`.
+5. **Given** the expert records a document, unit, semantic draft, reference candidate, dependency edge, or curation-note decision, **When** the decision is exported, **Then** the workbench saves a separate `StructuringReviewDecision` linked to the same source output.
+6. **Given** the source 001 JSON is loaded, **When** the expert saves review work, **Then** the original 001 output remains unchanged and all review changes are captured in separate review or curation artifacts.
 
 ---
 
@@ -91,6 +92,7 @@ promoting drafts into final compliance conclusions.
 - Runtime traces containing secrets, full prompts, provider payloads, or unnecessary sensitive raw text must be redacted or blocked from display.
 - Attempts to upload PDF or Word files directly into this feature must be rejected or routed outside scope; this feature accepts 001 JSON for structuring review, not raw document parsing.
 - Unsaved review edits must be distinguishable from exported review artifacts so reviewers do not mistake local edits for an auditable record.
+- Multiple unsaved edits to the same target and `field_path` must not silently overwrite audit context; the workbench must make clear whether export produces a patch sequence or the latest consolidated patch.
 - Runtime-facing screens must remain usable with mocked responses when 002 Agent Runtime does not exist.
 
 ## Requirements *(mandatory)*
@@ -115,13 +117,14 @@ promoting drafts into final compliance conclusions.
 - **FR-016**: The runtime scenario flow MUST submit scenarios only through a mocked or future 002 adapter and MUST NOT call LLMs, retrieval systems, vector search, rule execution, or 002 runtime logic directly.
 - **FR-017**: The workbench MUST define placeholder frontend-facing UI contracts for `RuntimeScenarioInput`, `RuntimeJudgmentDraftView`, `RuntimeCitationView`, `RuntimeEvidenceView`, and `RuntimeTraceView` until 002 finalizes its schemas.
 - **FR-018**: Placeholder runtime UI contracts MUST be explicitly marked as UI contracts and MUST NOT be treated as final 002 runtime schemas.
-- **FR-019**: `RuntimeJudgmentDraftView` MUST display draft judgment content, confidence, warnings, validation status, human-review requirement, citations, evidence, and trace summary when provided by a mocked or future adapter.
-- **FR-020**: `RuntimeCitationView` MUST display stable regulation unit IDs, source document/version, article or clause number where available, provided provenance, and as-of-date basis; free-text labels alone MUST be flagged as insufficient.
-- **FR-021**: `RuntimeEvidenceView` MUST display provided regulation units, dependency context, citation provenance, and as-of-date basis when supplied by a mocked or future adapter.
-- **FR-022**: `RuntimeTraceView` MUST display sanitized trace steps and MUST NOT expose secrets, full prompts, provider payloads, or unnecessary sensitive raw text.
-- **FR-023**: The feature MUST NOT implement the 001 structuring pipeline, 002 Agent Runtime, retrieval, vector search, rule execution, LLM calls, production asset promotion, or final compliance decision logic.
-- **FR-024**: The feature MUST NOT generate active `RulePack`, formal `RuleItem`, final `JudgmentResult`, runtime-safe reviewed assets, or final compliance conclusions.
-- **FR-025**: The feature MUST NOT parse PDF or Word files and MUST NOT treat raw policy or regulation documents as direct structuring inputs.
+- **FR-019**: Placeholder runtime UI contracts MUST remain replaceable once 002 finalizes its runtime schemas and MUST NOT be treated as backend or domain-level 002 schemas.
+- **FR-020**: `RuntimeJudgmentDraftView` MUST display draft judgment content, confidence, warnings, validation status, human-review requirement, citations, evidence, and trace summary when provided by a mocked or future adapter.
+- **FR-021**: `RuntimeCitationView` MUST display stable regulation unit IDs, source document/version, article or clause number where available, provided provenance, and as-of-date basis; free-text labels alone MUST be flagged as insufficient.
+- **FR-022**: `RuntimeEvidenceView` MUST display provided regulation units, dependency context, citation provenance, and as-of-date basis when supplied by a mocked or future adapter.
+- **FR-023**: `RuntimeTraceView` MUST display sanitized trace steps and MUST NOT expose secrets, full prompts, provider payloads, or unnecessary sensitive raw text.
+- **FR-024**: The feature MUST NOT implement the 001 structuring pipeline, 002 Agent Runtime, retrieval, vector search, rule execution, LLM calls, production asset promotion, or final compliance decision logic.
+- **FR-025**: The feature MUST NOT generate active `RulePack`, formal `RuleItem`, final `JudgmentResult`, runtime-safe reviewed assets, or final compliance conclusions.
+- **FR-026**: The feature MUST NOT parse PDF or Word files and MUST NOT treat raw policy or regulation documents as direct structuring inputs.
 
 ### Constitution Alignment *(mandatory for Arbiter features)*
 
@@ -138,9 +141,9 @@ promoting drafts into final compliance conclusions.
 
 - **StructuringPipelineOutput**: Existing 001 draft output used as the review module input. It provides document metadata, draft regulation units, semantic draft fields, evidence, validation findings, provenance, and review status.
 - **SourceOutputRef**: Stable source reference used by review and curation artifacts. Key attributes include `contract_version`, `document_id`, `source_id`, `source_file`, and `loaded_at`; hashes are not required.
-- **StructuringReviewPatch**: Separate auditable artifact for reviewed edits against generic targets. Key attributes include `source_output_ref`, `target_type`, `target_id`, `field_path`, `old_value`, `new_value`, `reviewer_note`, `reviewer_decision`, `reviewed_at`, and optional `unit_id` for unit-level edits.
-- **StructuringReviewDecision**: Separate auditable artifact for reviewer decisions targeting a document-level item, unit-level item, semantic draft, reference candidate, dependency edge, or curation note. It records the reviewed target, decision status, reviewer notes, timestamp, and source output reference without promoting assets.
-- **AssetCurationRecord**: Optional curation artifact for expert notes, candidate rule hints, scenario examples, ambiguity cases, and dependency issues. It remains review material and is not an active `RulePack`, formal `RuleItem`, runtime-safe reviewed asset, or final compliance decision.
+- **StructuringReviewPatch**: Separate auditable artifact for reviewed edits against generic targets. Key attributes include `source_output_ref`, `target_type`, `target_id`, `field_path`, `old_value`, `new_value`, `reviewer_note`, `reviewer_decision`, `reviewed_at`, optional `unit_id` for unit-level edits, and optional `reviewer_identity` when available. Identity management remains outside this feature.
+- **StructuringReviewDecision**: Separate auditable artifact for reviewer decisions targeting a document-level item, unit-level item, semantic draft, reference candidate, dependency edge, or curation note. It records the reviewed target, decision status, reviewer notes, timestamp, optional `reviewer_identity` when available, and source output reference without promoting assets. Identity management remains outside this feature.
+- **AssetCurationRecord**: Optional curation artifact for expert notes, candidate rule hints, scenario examples, ambiguity cases, and dependency issues. It may include optional `reviewer_identity` when available, but identity management remains outside this feature. It remains review material and is not an active `RulePack`, formal `RuleItem`, runtime-safe reviewed asset, or final compliance decision.
 - **RuntimeScenarioInput**: Placeholder UI contract for a natural-language compliance question and optional structured business scenario fields. It remains frontend-facing until 002 finalizes its runtime input contract.
 - **RuntimeJudgmentDraftView**: Placeholder UI contract for displaying a future runtime judgment draft, confidence, warnings, validation status, review requirement, citations, evidence, and trace summary. It is not a final `JudgmentResult`.
 - **RuntimeCitationView**: Placeholder UI contract for stable regulation unit ID, source document/version, article or clause number where available, adapter-provided provenance, and as-of-date basis.
@@ -158,6 +161,7 @@ promoting drafts into final compliance conclusions.
 - **SC-005**: All displayed runtime citations with available metadata show stable regulation unit ID, source document/version, article or clause number where available, adapter-provided provenance, and as-of-date basis; incomplete citations are visibly flagged.
 - **SC-006**: Runtime trace display validation confirms that secrets, full prompts, provider payloads, and unnecessary sensitive raw text are not shown to reviewers.
 - **SC-007**: Across structuring review and runtime scenario flows, draft outputs are labeled as non-final, and the feature produces no LLM calls, runtime logic, retrieval logic, rule execution, active `RulePack`, formal `RuleItem`, final `JudgmentResult`, or final compliance conclusion.
+- **SC-008**: Invalid or schema-incompatible `StructuringPipelineOutput` input is rejected with readable validation feedback and no editable review session is created.
 
 ## Assumptions
 

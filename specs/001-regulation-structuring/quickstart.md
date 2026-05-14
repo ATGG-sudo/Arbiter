@@ -21,13 +21,19 @@ Expected result:
 - Schema validation tests pass.
 - Normalized text and Markdown intake tests pass.
 - Optional FileInput -> ExtractedTextBundle -> NormalizedTextInput adapter
-  boundary tests pass without OCR, password handling, or full layout recovery.
+  boundary tests pass for local text/markdown files; PDF/DOCX raise
+  NotImplementedError. No OCR, password handling, or full layout recovery.
 - Document classification draft tests pass.
 - Temporal/version metadata extraction tests pass.
-- Hierarchy/article splitting tests pass.
+- Hierarchy/article splitting tests pass, including `第X条` / `Article X`,
+  numbered paragraphs, paragraph fallback, and char-count fallback for long
+  unstructured text.
 - Explicit unit tree fields support stable parent/order/display rendering.
-- Reference candidate extraction tests pass.
-- LLM-assisted extraction schema validation tests pass using a mock provider.
+- Reference candidate extraction tests pass, including same-document article
+  resolution and external document title detection (e.g., `External Reporting
+  Rules` or `《中文制度标题》`).
+- LLM-assisted extraction schema validation tests pass using a mock provider
+  that accepts `prompt` and `context` (no real model calls).
 - Model provider boundary tests pass.
 - Dependency graph draft tests pass.
 - Validation report tests pass.
@@ -51,11 +57,13 @@ Fixture inputs cover:
   obligations.
 - Schema-invalid LLM outputs that must become validation findings or structured
   errors.
-- Proposed dependency edges, cross-document target labels, and unresolved graph
-  issues.
+- Proposed dependency edges, cross-document target labels, external document
+  scope metadata, and unresolved graph issues.
 - Duplicate article labels.
 - Missing status/date/version/amendment metadata.
-- Extraction provenance with bounded method and trace identifiers.
+- Extraction provenance with bounded method and trace identifiers, without
+  secrets, full prompts, provider payloads, absolute local paths, or
+  unnecessary raw sensitive text.
 
 No fixture requires real model calls, secrets, databases, UI, or runtime agent
 tools. LLM-assisted behavior is exercised through mock provider outputs.
