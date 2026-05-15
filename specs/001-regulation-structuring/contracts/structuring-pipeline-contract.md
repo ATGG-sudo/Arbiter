@@ -37,6 +37,7 @@ Minimum request shape:
 {
   "request_id": "string",
   "input": {
+    "input_kind": "markdown",
     "source_id": "string",
     "source_file": "string",
     "raw_markdown": "string",

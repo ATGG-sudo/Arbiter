@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react'
 import { loadStructuringOutput } from '../validation/loadStructuringOutput'
-import { structureMarkdownForReview } from '../adapters/markdownStructuringAdapter'
+import { runStructuringFromMarkdown } from '../adapters/adminStructuringAdapter'
 import type { StructuringPipelineOutput } from '../contracts/structuringOutput'
 import type { SessionState } from './reviewSession'
 import { setSession } from './reviewSession'
@@ -19,6 +19,8 @@ export const StructuringOutputLoader: React.FC<StructuringOutputLoaderProps> = (
   const { t } = useI18n()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [markdownText, setMarkdownText] = useState('')
+  const [useLlmAssisted, setUseLlmAssisted] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   const openSession = useCallback(
     (
@@ -66,15 +68,39 @@ export const StructuringOutputLoader: React.FC<StructuringOutputLoaderProps> = (
   )
 
   const handleMarkdownText = useCallback(
-    (text: string, sourceFile: string) => {
+    async (text: string, sourceFile: string) => {
+      setIsLoading(true)
       try {
-        const output = structureMarkdownForReview(text, sourceFile)
-        openSession(output, sourceFile, 'markdown', text)
+        const request = {
+          request_id: `req-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          input: {
+            input_kind: 'markdown' as const,
+            source_id: `src-${Date.now()}`,
+            source_file: sourceFile,
+            raw_markdown: text,
+            source_type: 'internal_policy' as const,
+            metadata: {},
+          },
+          llm_assisted: useLlmAssisted,
+          model_mode: 'configured_provider' as const,
+          requested_at: new Date().toISOString(),
+        }
+        const result = await runStructuringFromMarkdown(request)
+        if (result.status === 'succeeded' && result.output) {
+          openSession(result.output, sourceFile, 'markdown', text)
+        } else {
+          const errorMessages = result.errors.map((e) =>
+            typeof e.message === 'string' ? e.message : String(e),
+          )
+          onError(errorMessages.length > 0 ? errorMessages : [t.invalidMarkdownInput])
+        }
       } catch (error) {
         onError([error instanceof Error ? error.message : t.invalidMarkdownInput])
+      } finally {
+        setIsLoading(false)
       }
     },
-    [onError, openSession, t],
+    [onError, openSession, t, useLlmAssisted],
   )
 
   const handleFile = useCallback(
@@ -120,9 +146,9 @@ export const StructuringOutputLoader: React.FC<StructuringOutputLoaderProps> = (
   )
 
   const onMarkdownSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault()
-      handleMarkdownText(markdownText, 'markdown-input.md')
+      await handleMarkdownText(markdownText, 'markdown-input.md')
     },
     [handleMarkdownText, markdownText],
   )
@@ -138,9 +164,26 @@ export const StructuringOutputLoader: React.FC<StructuringOutputLoaderProps> = (
           onChange={(e) => setMarkdownText(e.target.value)}
           placeholder={t.markdownInputPlaceholder}
         />
-        <button className="btn btn-primary" type="submit">
-          {t.createDraftFromMarkdown}
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={useLlmAssisted}
+            onChange={(e) => setUseLlmAssisted(e.target.checked)}
+          />
+          <span>{t.useLlmAssistedParsing}</span>
+        </label>
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={isLoading || !markdownText.trim()}
+        >
+          {isLoading ? t.parsingMarkdown : t.createDraftFromMarkdown}
         </button>
+        {isLoading && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+            {t.parsingMarkdown}
+          </p>
+        )}
       </form>
       <div
         className="file-input-area"

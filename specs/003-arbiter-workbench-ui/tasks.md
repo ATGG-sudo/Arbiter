@@ -53,11 +53,11 @@ frontend adapter-client workspace for 003.
 
 **CRITICAL**: No user story work should begin until frontend contracts and fixture validation exist.
 
-- [ ] T008 [P] Write contract tests for `StructuringRunRequest`, `StructuringRunResult`, and the `StructuringPipelineOutput` frontend validation mirror in `frontend/tests/contract/structuringOutput.contract.test.ts`
+- [X] T008 [P] Write contract tests for `StructuringRunRequest`, `StructuringRunResult`, and the `StructuringPipelineOutput` frontend validation mirror in `frontend/tests/contract/structuringOutput.contract.test.ts`
 - [ ] T009 [P] Write contract tests for `StructuringReviewPatch`, `StructuringReviewDecision`, and `AssetCurationRecord` exports in `frontend/tests/contract/reviewArtifacts.contract.test.ts`
 - [ ] T010 [P] Write contract tests for placeholder runtime UI contracts in `frontend/tests/contract/runtimeContracts.contract.test.ts`
-- [ ] T011 [P] Write targeted boundary tests for forbidden direct provider SDK calls, embedded model/base-url/API-key configuration, 002 runtime calls, backend/database files, and forbidden modifications to 001-owned paths in `frontend/tests/contract/scopeBoundary.contract.test.ts`
-- [ ] T012 Implement `StructuringRunRequest`, `StructuringRunResult`, and the `StructuringPipelineOutput` Zod frontend validation mirror in `frontend/src/contracts/structuringOutput.ts`
+- [X] T011 [P] Write targeted boundary tests for forbidden direct provider SDK calls, embedded model/base-url/API-key configuration, 002 runtime calls, backend/database files, and forbidden modifications to 001-owned paths in `frontend/tests/contract/scopeBoundary.contract.test.ts`
+- [X] T012 Implement `StructuringRunRequest`, `StructuringRunResult`, and the `StructuringPipelineOutput` Zod frontend validation mirror in `frontend/src/contracts/structuringOutput.ts`
 - [ ] T013 Implement review and curation artifact contracts in `frontend/src/contracts/reviewArtifacts.ts`
 - [ ] T013a Implement `IntegratedStructuringReviewPackage` and input-kind contracts in `frontend/src/contracts/reviewArtifacts.ts`
 - [ ] T014 Implement placeholder runtime UI contracts in `frontend/src/contracts/runtimeContracts.ts`
@@ -68,7 +68,7 @@ frontend adapter-client workspace for 003.
 - [ ] T019 Implement JSON import validation helpers that create no editable session for invalid input in `frontend/src/validation/loadStructuringOutput.ts`
 - [ ] T020 Implement sanitized trace redaction helpers in `frontend/src/validation/redaction.ts`
 - [ ] T021 Implement review artifact export helpers without mutating immutable `base_output` in `frontend/src/workbench/exportArtifacts.ts`
-- [ ] T021a Implement the frontend Admin structuring adapter client in `frontend/src/adapters/adminStructuringAdapter.ts`; it sends `StructuringRunRequest`, accepts `StructuringRunResult`, and never calls model providers directly
+- [X] T021a Implement the frontend Admin structuring adapter client in `frontend/src/adapters/adminStructuringAdapter.ts`; it sends `StructuringRunRequest`, accepts `StructuringRunResult`, and never calls model providers directly
 - [ ] T021b Implement integrated package export helpers that preserve base output and apply edits only to `merged_output` in `frontend/src/workbench/exportArtifacts.ts`
 - [ ] T022 Implement a mocked runtime adapter with no external calls in `frontend/src/adapters/mockRuntimeAdapter.ts`
 
@@ -99,12 +99,12 @@ opens through the same review surfaces.
 - [ ] T024 [P] [US1] Write unit tree ordering and parent-child rendering tests in `frontend/tests/contract/unitTree.contract.test.ts`
 - [ ] T025 [P] [US1] Write document metadata review tests in `frontend/tests/contract/documentMetadata.contract.test.ts`
 - [ ] T026 [P] [US1] Write review patch, decision, curation note, and repeated-edit export tests in `frontend/tests/contract/reviewExport.contract.test.ts`
-- [ ] T026a [P] [US1] Write Admin adapter client and integrated package export tests in `frontend/tests/contract/integratedPackage.contract.test.ts`
+- [X] T026a [P] [US1] Write Admin adapter client and integrated package export tests in `frontend/tests/contract/integratedPackage.contract.test.ts`
 - [ ] T027 [P] [US1] Write Playwright smoke test for the curation review flow in `frontend/tests/smoke/curation-flow.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T028 [US1] Implement Markdown run-request creation, Admin adapter invocation, and replay JSON loading UI in `frontend/src/workbench/StructuringOutputLoader.tsx`
+- [X] T028 [US1] Implement Markdown run-request creation, Admin adapter invocation, and replay JSON loading UI in `frontend/src/workbench/StructuringOutputLoader.tsx`
 - [ ] T029 [US1] Implement readable validation and adapter failure display for invalid inputs or failed `StructuringRunResult` values in `frontend/src/workbench/ValidationFailurePanel.tsx`
 - [ ] T030 [US1] Implement document metadata review surface in `frontend/src/workbench/DocumentMetadataPanel.tsx`
 - [ ] T031 [US1] Implement unit tree display using `parent_unit_id`, `order_index`, `display_label`, and `hierarchy` in `frontend/src/workbench/UnitTree.tsx`

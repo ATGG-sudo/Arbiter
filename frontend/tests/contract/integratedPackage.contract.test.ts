@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { StructuringPipelineOutput } from '../../src/contracts/structuringOutput'
 import { IntegratedStructuringReviewPackage } from '../../src/contracts/reviewArtifacts'
-import { structureMarkdownForReview } from '../../src/adapters/markdownStructuringAdapter'
 import {
   createIntegratedStructuringReviewPackage,
   createReviewPatch,
 } from '../../src/workbench/exportArtifacts'
 import type { SessionState } from '../../src/workbench/reviewSession'
+import validFixture from '../../src/fixtures/structuring-output.valid.json'
 
 const markdown = `# 投资管理制度
 
@@ -17,28 +17,18 @@ const markdown = `# 投资管理制度
 第二条 投资发展部负责准备投资材料。`
 
 describe('Markdown intake and integrated package export', () => {
-  it('converts Markdown into a draft StructuringPipelineOutput for review', () => {
-    const output = structureMarkdownForReview(
-      markdown,
-      'investment-policy.md',
-      '2026-05-14T00:00:00Z',
-    )
+  it('accepts a 001 adapter StructuringPipelineOutput for Markdown-origin review', () => {
+    const output = StructuringPipelineOutput.parse(validFixture)
 
-    const result = StructuringPipelineOutput.safeParse(output)
-    expect(result.success).toBe(true)
-    expect(output.document.source_file).toBe('investment-policy.md')
+    expect(output.document.source_file).toBe('sample-policy.md')
     expect(output.document.review_status).toBe('needs_review')
-    expect(output.units.length).toBeGreaterThanOrEqual(3)
+    expect(output.units.length).toBeGreaterThanOrEqual(10)
     expect(output.units.some((unit) => unit.unit_kind === 'article')).toBe(true)
     expect(output.units.every((unit) => unit.review_status === 'needs_review')).toBe(true)
   })
 
   it('exports a validated integrated package with immutable base output and patched merged output', () => {
-    const output = structureMarkdownForReview(
-      markdown,
-      'investment-policy.md',
-      '2026-05-14T00:00:00Z',
-    )
+    const output = StructuringPipelineOutput.parse(validFixture)
     const unit = output.units.find((candidate) => candidate.unit_kind === 'article')
     expect(unit).toBeDefined()
     if (!unit) throw new Error('Expected an article unit')

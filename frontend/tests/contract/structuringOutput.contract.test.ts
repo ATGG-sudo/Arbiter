@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { StructuringPipelineOutput } from '../../src/contracts/structuringOutput'
+import {
+  StructuringPipelineOutput,
+  StructuringRunRequest,
+  StructuringRunResult,
+} from '../../src/contracts/structuringOutput'
 import validFixture from '../../src/fixtures/structuring-output.valid.json'
 import invalidFixture from '../../src/fixtures/structuring-output.invalid.json'
 
@@ -100,5 +104,137 @@ describe('StructuringPipelineOutput Zod validation mirror', () => {
     }
     const result = StructuringPipelineOutput.safeParse(minimal)
     expect(result.success).toBe(true)
+  })
+})
+
+describe('StructuringRunRequest Zod validation', () => {
+  it('accepts a valid run request', () => {
+    const request = {
+      request_id: 'req-001',
+      input: {
+        input_kind: 'markdown',
+        source_id: 'src-policy-001',
+        source_file: 'investment-policy.md',
+        raw_markdown: '# Policy\n\nArticle 1\nContent.',
+        source_type: 'internal_policy',
+        metadata: { title: 'Investment Policy' },
+      },
+      llm_assisted: true,
+      model_mode: 'configured_provider',
+      requested_at: '2026-05-14T00:00:00Z',
+    }
+    const result = StructuringRunRequest.safeParse(request)
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects empty raw_markdown', () => {
+    const request = {
+      request_id: 'req-001',
+      input: {
+        input_kind: 'markdown',
+        source_id: 'src-001',
+        source_file: 'policy.md',
+        raw_markdown: '',
+        source_type: 'internal_policy',
+        metadata: {},
+      },
+      llm_assisted: true,
+      model_mode: 'configured_provider',
+      requested_at: '2026-05-14T00:00:00Z',
+    }
+    const result = StructuringRunRequest.safeParse(request)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects invalid model_mode', () => {
+    const request = {
+      request_id: 'req-001',
+      input: {
+        input_kind: 'markdown',
+        source_id: 'src-001',
+        source_file: 'policy.md',
+        raw_markdown: '# Policy',
+        source_type: 'internal_policy',
+        metadata: {},
+      },
+      llm_assisted: true,
+      model_mode: 'openai_direct',
+      requested_at: '2026-05-14T00:00:00Z',
+    }
+    const result = StructuringRunRequest.safeParse(request)
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('StructuringRunResult Zod validation', () => {
+  it('accepts a succeeded result with output', () => {
+    const resultObj = {
+      request_id: 'req-001',
+      run_id: 'struct-run-001',
+      status: 'succeeded',
+      output: validFixture,
+      errors: [],
+      warnings: [],
+      sanitized_trace: {
+        adapter: '001-structuring',
+        model_call_count: 1,
+      },
+      token_usage: {
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150,
+      },
+      completed_at: '2026-05-14T00:00:20Z',
+    }
+    const result = StructuringRunResult.safeParse(resultObj)
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a validation_failed result without output', () => {
+    const resultObj = {
+      request_id: 'req-001',
+      run_id: 'struct-run-001',
+      status: 'validation_failed',
+      output: null,
+      errors: [{ code: 'empty_markdown', message: 'Empty input' }],
+      warnings: [],
+      sanitized_trace: {},
+      token_usage: null,
+      completed_at: null,
+    }
+    const result = StructuringRunResult.safeParse(resultObj)
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects invalid status', () => {
+    const resultObj = {
+      request_id: 'req-001',
+      run_id: 'struct-run-001',
+      status: 'partial_success',
+      output: null,
+      errors: [],
+      warnings: [],
+      sanitized_trace: {},
+      token_usage: null,
+      completed_at: null,
+    }
+    const result = StructuringRunResult.safeParse(resultObj)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a succeeded result without output', () => {
+    const resultObj = {
+      request_id: 'req-001',
+      run_id: 'struct-run-001',
+      status: 'succeeded',
+      output: null,
+      errors: [],
+      warnings: [],
+      sanitized_trace: {},
+      token_usage: null,
+      completed_at: null,
+    }
+    const result = StructuringRunResult.safeParse(resultObj)
+    expect(result.success).toBe(false)
   })
 })

@@ -9,6 +9,7 @@ description = "Admin-side regulation structuring contracts for Arbiter"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.7,<3",
+    "python-dotenv>=1.0,<2",
 ]
 
 [project.optional-dependencies]

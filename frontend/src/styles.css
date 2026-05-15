@@ -403,6 +403,17 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-row input {
+  width: 1rem;
+  height: 1rem;
+}
+
 .markdown-loader textarea {
   min-height: 260px;
   resize: vertical;

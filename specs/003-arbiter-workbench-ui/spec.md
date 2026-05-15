@@ -26,8 +26,9 @@ outside the revised MVP acceptance path.
 
 ### User Story 1 - LLM-Assisted Markdown Structuring Review (Priority: P1)
 
-An expert pastes or uploads Markdown regulation text, clicks an LLM-assisted
-parse action, receives a 001 `StructuringPipelineOutput` draft, reviews
+An expert pastes or uploads Markdown regulation text, chooses whether to use
+LLM-assisted parsing, clicks the parse action, receives a 001
+`StructuringPipelineOutput` draft, reviews
 document metadata, unit tree, semantic draft fields, reference candidates,
 dependency edges, validation findings, and extraction provenance, edits draft
 fields, records review decisions, and exports an integrated package marked
@@ -45,7 +46,7 @@ Markdown, validation report, and `package_status = reviewed_for_structuring`.
 
 **Acceptance Scenarios**:
 
-1. **Given** non-empty Markdown text, **When** the expert clicks LLM-assisted parse, **Then** the workbench sends a `StructuringRunRequest` to the Admin structuring adapter and does not call an LLM directly from frontend code.
+1. **Given** non-empty Markdown text, **When** the expert chooses the LLM-assisted option and clicks parse, **Then** the workbench sends a `StructuringRunRequest` with `llm_assisted = true` to the Admin structuring adapter and does not call an LLM directly from frontend code.
 2. **Given** the adapter returns a valid 001 `StructuringPipelineOutput`, **When** the draft opens, **Then** the workbench displays document metadata, unit tree, semantic draft fields, evidence text, reference candidates, dependency edges, validation findings, and extraction provenance.
 3. **Given** the adapter returns validation warnings or LLM schema-validation findings, **When** the draft opens, **Then** the workbench shows those findings as review blockers or warnings instead of hiding them.
 4. **Given** the expert edits a draft field, **When** the edit is recorded, **Then** the workbench creates a `StructuringReviewPatch` against the immutable base output and updates only the review session's merged draft state.
@@ -114,7 +115,7 @@ focuses on Admin-side structuring review.
 ### Functional Requirements
 
 - **FR-001**: The workbench MUST accept Markdown regulation/policy text as the primary MVP input.
-- **FR-002**: The workbench MUST provide an explicit LLM-assisted parse action that invokes a 001 Admin structuring adapter using `StructuringRunRequest`.
+- **FR-002**: The workbench MUST provide an explicit parse action and an LLM-assisted option that invokes a 001 Admin structuring adapter using `StructuringRunRequest`.
 - **FR-003**: The workbench MUST NOT call model providers directly from frontend code; all model calls MUST route through the 001 pipeline and `LLMClient / ModelProvider`.
 - **FR-004**: The structuring adapter MUST return either a valid `StructuringPipelineOutput` draft or structured errors; invalid outputs must not create editable review sessions.
 - **FR-005**: The workbench MUST display extraction provenance, including `extraction_method`, `prompt_contract_version`, and sanitized `model_trace_id` when provided.

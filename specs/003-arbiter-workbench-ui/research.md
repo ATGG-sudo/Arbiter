@@ -3,9 +3,9 @@
 ## Decision: Primary flow invokes the 001 pipeline from the UI
 
 **Rationale**: The target workflow starts with Markdown inside the workbench and
-requires the user to click LLM-assisted parsing. A UI-local deterministic
-adapter cannot satisfy this because it does not use spec001's hybrid
-deterministic + LLM-assisted extraction. The workbench therefore needs an
+lets the user choose whether to use LLM-assisted parsing. A UI-local
+deterministic adapter cannot satisfy this because it does not use spec001's
+hybrid deterministic + LLM-assisted extraction. The workbench therefore needs an
 Admin-only structuring adapter that delegates to 001 and returns a validated
 `StructuringPipelineOutput`.
 

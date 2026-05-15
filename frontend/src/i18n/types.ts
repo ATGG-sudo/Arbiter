@@ -13,12 +13,14 @@ export interface T {
   supportedInputs: string
   markdownInput: string
   markdownInputPlaceholder: string
+  useLlmAssistedParsing: string
   createDraftFromMarkdown: string
   invalidJsonFile: string
   invalidMarkdownInput: string
   pleaseUploadJson: string
   pleaseUploadSupportedFile: string
   unsupportedInputFile: string
+  parsingMarkdown: string
 
   // Validation
   validationFailed: string

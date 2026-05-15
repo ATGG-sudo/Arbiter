@@ -9,9 +9,9 @@ production identity management, and database persistence.
 
 ## Workbench-to-001 Structuring Run
 
-The workbench triggers LLM-assisted parsing through an Admin-only adapter. The
-adapter delegates to the 001 Regulation Structuring Pipeline and returns a
-validated 001 output.
+The workbench triggers parsing through an Admin-only adapter, with
+`llm_assisted` set from the user's UI choice. The adapter delegates to the 001
+Regulation Structuring Pipeline and returns a validated 001 output.
 
 ### StructuringRunRequest
 
@@ -43,7 +43,7 @@ Required behavior:
   or model-specific secrets.
 - Adapter converts this request into 001 `NormalizedTextInput`.
 - `llm_assisted=true` authorizes only the Admin adapter/001 pipeline to use the
-  configured `ModelProvider`.
+  configured `ModelProvider`; `llm_assisted=false` keeps the run deterministic.
 - Empty Markdown is rejected before adapter execution when possible.
 
 ### StructuringRunResult

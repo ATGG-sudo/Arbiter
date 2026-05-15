@@ -6,8 +6,8 @@
 ## Summary
 
 Revise spec003 from a JSON/fixture review UI into an Admin-side workbench where
-the primary flow is Markdown input -> click LLM-assisted parse -> 001
-`StructuringPipelineOutput` draft -> expert review and revision ->
+the primary flow is Markdown input -> choose whether to use LLM-assisted
+parse -> 001 `StructuringPipelineOutput` draft -> expert review and revision ->
 integrated reviewed-for-structuring package export.
 
 The workbench must not call model providers directly. It needs a thin Admin

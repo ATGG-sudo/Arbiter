@@ -19,9 +19,9 @@ planning artifact only; implementation code is not changed by this plan.
 2. Start the workbench UI.
 3. Paste or upload Markdown with a title, chapter, articles, and at least one
    cross-reference.
-4. Click the LLM-assisted parse action.
-5. Confirm the UI sends a `StructuringRunRequest` and does not call a model
-   provider directly.
+4. Choose whether to use LLM-assisted parsing, then click the parse action.
+5. Confirm the UI sends a `StructuringRunRequest` with the selected
+   `llm_assisted` value and does not call a model provider directly.
 6. Confirm the adapter returns a valid 001 `StructuringPipelineOutput` with
    `extraction_method = mixed` when mock LLM enrichment is accepted.
 7. Confirm the review UI shows extraction provenance, document classification,
@@ -49,6 +49,8 @@ planning artifact only; implementation code is not changed by this plan.
 
 - Empty Markdown creates no structuring run.
 - Adapter failure creates no editable review session.
+- A selected LLM-assisted run with no configured provider creates a structured
+  failure and no editable review session.
 - Schema-invalid 001 output creates no editable review session.
 - LLM schema-validation failures are visible as findings when output remains
   reviewable.

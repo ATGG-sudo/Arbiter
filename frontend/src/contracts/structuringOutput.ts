@@ -331,6 +331,49 @@ export const StructuringPipelineOutput = z.object({
   validation_report: StructuringValidationReport,
 })
 
+// Workbench invocation boundary contracts (spec001 / spec003)
+
+export const StructuringRunRequestInput = z.object({
+  input_kind: z.literal('markdown').default('markdown'),
+  source_id: z.string().min(1),
+  source_file: z.string().min(1),
+  raw_markdown: z.string().min(1),
+  source_type: DocumentSourceType.default('unknown'),
+  metadata: z.record(z.any()).default({}),
+})
+
+export const StructuringRunRequest = z.object({
+  request_id: z.string().min(1),
+  input: StructuringRunRequestInput,
+  llm_assisted: z.boolean().default(true),
+  model_mode: z.enum(['configured_provider', 'mock_provider']).default('configured_provider'),
+  requested_at: z.string().min(1),
+})
+
+export const StructuringRunResult = z.object({
+  request_id: z.string().min(1),
+  run_id: z.string().min(1),
+  status: z.enum(['succeeded', 'failed', 'validation_failed', 'cancelled']),
+  output: StructuringPipelineOutput.nullable().default(null),
+  errors: z.array(z.record(z.any())).default([]),
+  warnings: z.array(z.string()).default([]),
+  sanitized_trace: z.record(z.any()).default({}),
+  token_usage: z.object({
+    prompt_tokens: z.number().int(),
+    completion_tokens: z.number().int(),
+    total_tokens: z.number().int(),
+  }).nullable().default(null),
+  completed_at: z.string().nullable().default(null),
+}).superRefine((result, ctx) => {
+  if (result.status === 'succeeded' && result.output === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['output'],
+      message: 'succeeded StructuringRunResult requires output',
+    })
+  }
+})
+
 // Types
 export type DocumentStatus = z.infer<typeof DocumentStatus>
 export type ParseStatus = z.infer<typeof ParseStatus>
@@ -361,3 +404,6 @@ export type ResolvedDependencyGraphDraft = z.infer<typeof ResolvedDependencyGrap
 export type StructuringValidationFinding = z.infer<typeof StructuringValidationFinding>
 export type StructuringValidationReport = z.infer<typeof StructuringValidationReport>
 export type StructuringPipelineOutput = z.infer<typeof StructuringPipelineOutput>
+export type StructuringRunRequestInput = z.infer<typeof StructuringRunRequestInput>
+export type StructuringRunRequest = z.infer<typeof StructuringRunRequest>
+export type StructuringRunResult = z.infer<typeof StructuringRunResult>
