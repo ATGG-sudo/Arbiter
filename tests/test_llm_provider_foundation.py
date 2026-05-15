@@ -56,6 +56,17 @@ def test_deepseek_settings_use_openai_compatible_defaults(
     assert settings.model == "deepseek-chat"
 
 
+def test_empty_locale_setting_defaults_to_en(monkeypatch: pytest.MonkeyPatch) -> None:
+    from arbiter.llm import LLMProviderSettings
+
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("ARBITER_LLM_LOCALE", "")
+
+    settings = LLMProviderSettings.from_env()
+
+    assert settings.locale == "en"
+
+
 def test_live_provider_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     from arbiter.llm import LLMProviderSettings, build_model_provider
 
@@ -107,7 +118,8 @@ def test_openai_compatible_provider_validates_structured_output() -> None:
     assert captured["headers"]["Authorization"] == "Bearer test-key"
     assert captured["payload"]["model"] == "test-model"
     assert captured["payload"]["response_format"] == {"type": "json_object"}
-    assert "document_id" in captured["payload"]["messages"][0]["content"]
+    assert "Schema:" in captured["payload"]["messages"][0]["content"]
+    assert "document_id" in captured["payload"]["messages"][1]["content"]
 
 
 def test_openai_compatible_provider_rejects_schema_invalid_output() -> None:

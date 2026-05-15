@@ -23,6 +23,7 @@ class LLMProviderSettings:
     api_key: str | None = None
     api_key_env_var: str | None = None
     timeout_seconds: float = 30.0
+    locale: str = "en"
     request_options: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -35,9 +36,10 @@ class LLMProviderSettings:
         provider = provider.replace("-", "_")
 
         timeout_seconds = float(values.get("ARBITER_LLM_TIMEOUT_SECONDS", "30"))
+        locale = values.get("ARBITER_LLM_LOCALE", "en").strip().lower() or "en"
 
         if provider == "none":
-            return cls(provider="none", timeout_seconds=timeout_seconds)
+            return cls(provider="none", timeout_seconds=timeout_seconds, locale=locale)
 
         if provider == "openai":
             return cls(
@@ -51,6 +53,7 @@ class LLMProviderSettings:
                 api_key=values.get("OPENAI_API_KEY"),
                 api_key_env_var="OPENAI_API_KEY",
                 timeout_seconds=timeout_seconds,
+                locale=locale,
             )
 
         if provider == "deepseek":
@@ -65,6 +68,7 @@ class LLMProviderSettings:
                 api_key=values.get("DEEPSEEK_API_KEY"),
                 api_key_env_var="DEEPSEEK_API_KEY",
                 timeout_seconds=timeout_seconds,
+                locale=locale,
                 request_options=_deepseek_request_options(values),
             )
 
@@ -76,6 +80,7 @@ class LLMProviderSettings:
                 api_key=values.get("ARBITER_LLM_API_KEY"),
                 api_key_env_var="ARBITER_LLM_API_KEY",
                 timeout_seconds=timeout_seconds,
+                locale=locale,
             )
 
         raise ValueError(

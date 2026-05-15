@@ -21,6 +21,7 @@ def build_model_provider(
             model=resolved.required_model(),
             request_options=resolved.request_options,
             timeout_seconds=resolved.timeout_seconds,
+            locale=resolved.locale,
         )
 
     raise ValueError(f"Unsupported LLM provider: {resolved.provider}")
